@@ -37,7 +37,7 @@ function startEdit(b: Board) {
   editingId.value = b.id;
   editTitle.value = b.title;
   nextTick(() => {
-    const el = document.getElementById("rename-input");
+    const el = document.getElementById("rename-input-" + b.id);
     el?.focus();
     (el as HTMLInputElement)?.select?.();
   });
@@ -115,40 +115,41 @@ onMounted(fetchBoards);
       <div
         v-for="b in filtered"
         :key="b.id"
-        class="group card p-4 text-slate-900 cursor-pointer select-none transition hover:-translate-y-0.5"
+        class="group card p-4 text-slate-900 cursor-pointer select-none transition hover:-translate-y-0.5 relative"
         @click="openBoard(b)"
         role="button"
         :aria-label="`Open ${b.title}`"
       >
         <div class="flex items-start justify-between gap-2">
           <div class="min-w-0">
-            <h3 class="truncate text-lg font-semibold !text-slate-900">
+            <h3 v-if="editingId !== b.id" class="truncate text-lg font-semibold !text-slate-900">
               {{ b.title || "Untitled" }}
             </h3>
+            
+            <!-- Inline rename -->
+            <div v-else class="mt-1 flex gap-2" @click.stop>
+              <input
+                :id="'rename-input-' + b.id"
+                v-model="editTitle"
+                class="input flex-1"
+                placeholder="Board title"
+                @keyup.enter="saveEdit(b)"
+                @keyup.esc="editingId = null"
+              />
+              <button class="btn btn-primary btn-sm" @click="saveEdit(b)">Save</button>
+              <button class="btn btn-ghost btn-sm" @click="editingId = null">Cancel</button>
+            </div>
+
             <p class="mt-1 text-sm !text-slate-700">
               Click to open the board.
             </p>
           </div>
 
           <!-- action buttons -->
-          <div class="opacity-0 transition group-hover:opacity-100" @click.stop>
-            <button class="btn btn-outline" @click="startEdit(b)">Rename</button>
-            <button class="btn btn-danger ml-2" @click="removeBoard(b)">Delete</button>
+          <div v-if="editingId !== b.id" class="opacity-0 transition group-hover:opacity-100 flex-shrink-0" @click.stop>
+            <button class="btn btn-outline btn-sm text-xs" @click="startEdit(b)">Rename</button>
+            <button class="btn btn-danger btn-sm text-xs ml-2" @click="removeBoard(b)">Delete</button>
           </div>
-        </div>
-
-        <!-- Inline rename -->
-        <div v-if="editingId === b.id" class="mt-3 flex gap-2" @click.stop>
-          <input
-            id="rename-input"
-            v-model="editTitle"
-            class="input flex-1"
-            placeholder="Board title"
-            @keyup.enter="saveEdit(b)"
-            @keyup.esc="editingId = null"
-          />
-          <button class="btn btn-primary" @click="saveEdit(b)">Save</button>
-          <button class="btn btn-ghost" @click="editingId = null">Cancel</button>
         </div>
 
         <div class="mt-4 h-1 w-16 rounded-full bg-gradient-to-r from-violet-400/70 to-fuchsia-400/70"></div>

@@ -1,12 +1,13 @@
 import axios from "axios";
 
 export const api = axios.create({
-  baseURL: import.meta.env.VITE_API_BASE_URL || "http://localhost:4000",
+  baseURL: import.meta.env.VITE_API_BASE_URL || "http://127.0.0.1:4000",
 });
 api.interceptors.request.use((cfg) => {
   const t = localStorage.getItem("token");
-  if (t) (cfg.headers ??= {}).Authorization = `Bearer ${t}`;
-  console.log("[API]", (cfg.baseURL || "") + (cfg.url || ""), cfg.headers?.Authorization);
+  if (t && cfg.headers) {
+    cfg.headers.Authorization = `Bearer ${t}`;
+  }
   return cfg;
 });
 api.interceptors.response.use(
@@ -14,7 +15,9 @@ api.interceptors.response.use(
   (err) => {
     if (err.response?.status === 401) {
       localStorage.removeItem("token");
-      location.href = "/login";
+      if (window.location.pathname !== "/login" && window.location.pathname !== "/register") {
+        window.location.href = "/login";
+      }
     }
     return Promise.reject(err);
   }

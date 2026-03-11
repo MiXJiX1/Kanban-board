@@ -1,6 +1,6 @@
 <template>
   <div class="min-h-screen bg-slate-900">
-    <TopBar />
+    <TopBar v-if="!isAuthPage" />
     <main class="mx-auto w-full max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
       <RouterView v-slot="{ Component }">
         <transition
@@ -16,30 +16,19 @@
 </template>
 
 <script setup lang="ts">
-import { onMounted } from "vue";
+import { onMounted, computed } from "vue";
+import { useRoute } from "vue-router";
 import TopBar from "./components/TopBar.vue";
-import { api, setToken } from "./api/client";
+import { setToken } from "./api/client";
+
+const route = useRoute();
+const isAuthPage = computed(() => {
+  return route.path === "/login" || route.path === "/register";
+});
 
 onMounted(() => {
   const token = localStorage.getItem("token");
   if (token) setToken(token);
-
-  const FLAG = "__api_interceptor_installed__";
-  if (!(api as any)[FLAG]) {
-    api.interceptors.response.use(
-      (res) => res,
-      (err) => {
-        if (err?.response?.status === 401) {
-          localStorage.removeItem("token");
-          if (!location.pathname.includes("/login")) {
-            location.href = "/login";
-          }
-        }
-        return Promise.reject(err);
-      }
-    );
-    (api as any)[FLAG] = true;
-  }
 
   if (!document.title) document.title = "Kanban Board";
 });

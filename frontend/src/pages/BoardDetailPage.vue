@@ -96,21 +96,31 @@ async function addTask(col: Column){
 /* Drag & drop */
 async function saveAllTaskOrders(){
   if(!board.value) return;
-  await Promise.all(
-    board.value.columns.map(c =>
-      api.patch("/tasks/reorder", {
-        columnId: c.id,
-        items: c.tasks.map((t,i)=>({ id:t.id, position:i }))
-      })
-    )
-  );
+  try {
+    await Promise.all(
+      board.value.columns.map(c =>
+        api.patch("/tasks/reorder", {
+          columnId: c.id,
+          items: c.tasks.map((t,i)=>({ id:t.id, position:i }))
+        })
+      )
+    );
+  } catch (err: any) {
+    alert("Failed to save task order: " + (err.response?.data?.message || err.message));
+    await load();
+  }
 }
 async function onTasksChange(){ await nextTick(); await saveAllTaskOrders(); }
 async function onColsChange(){
   if(!board.value) return;
-  await api.patch("/columns/reorder", {
-    items: board.value.columns.map((c,i)=>({ id:c.id, position:i }))
-  });
+  try {
+    await api.patch("/columns/reorder", {
+      items: board.value.columns.map((c,i)=>({ id:c.id, position:i }))
+    });
+  } catch (err: any) {
+    alert("Failed to save column order: " + (err.response?.data?.message || err.message));
+    await load();
+  }
 }
 
 /* edit / delete */
