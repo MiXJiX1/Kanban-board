@@ -451,5 +451,4 @@ app.use((err: any, req: Request, res: Response, next: NextFunction) => {
 
 /* --------------------------------- Start -------------------------------- */
 const port = Number(process.env.PORT || 4000);
-const host = process.env.NODE_ENV === "production" || process.env.RENDER ? "0.0.0.0" : "127.0.0.1";
-app.listen(port, host, () => console.log(`API on http://${host}:${port}`));
+app.listen(port, () => console.log(`API on port ${port}`));
