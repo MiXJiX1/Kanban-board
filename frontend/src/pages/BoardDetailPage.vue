@@ -40,6 +40,7 @@ const newTagName    = ref("");
 
 const renaming  = ref(false);
 const boardTitle= ref("");
+const showAddModal = ref(false);
 
 const editing   = ref<{type:"task"|"col"; id:string}|null>(null);
 const editText  = ref("");
@@ -191,6 +192,7 @@ async function toggleAssignee(taskId: string, userId: string, on: boolean){
         </button>
 
         <h2 class="text-2xl font-semibold text-white">{{ board.title }}</h2>
+        <button class="btn btn-primary" @click="showAddModal = true">+ Add Options</button>
         <button class="btn btn-outline" @click="startRenameBoard">Rename</button>
         <button class="btn btn-danger"  @click="deleteCurrentBoard">Delete</button>
       </template>
@@ -206,46 +208,79 @@ async function toggleAssignee(taskId: string, userId: string, on: boolean){
       </template>
     </div>
 
-    <!-- Create Tag -->
-    <div class="card p-4">
-      <div class="flex flex-col gap-3 sm:flex-row sm:items-center">
-        <input
-          v-model="newTagName"
-          class="input flex-1 bg-white text-slate-900 placeholder-slate-400 border-slate-300"
-          placeholder="New tag name"
-        />
-        <button class="btn btn-primary" @click="addTag">Add tag</button>
-      </div>
-    </div>
+    <!-- Add Data Modal -->
+    <div v-if="showAddModal" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm" @click="showAddModal = false">
+      <div class="bg-slate-50 rounded-2xl w-full max-w-2xl shadow-2xl overflow-hidden relative" @click.stop>
+        
+        <!-- Modal Header -->
+        <div class="flex items-center justify-between px-6 py-4 border-b border-slate-200 bg-white">
+          <h3 class="text-lg font-bold text-slate-800">Board Options</h3>
+          <button @click="showAddModal = false" class="text-slate-400 hover:text-slate-700 transition">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+            </svg>
+          </button>
+        </div>
 
-    <!-- Invite -->
-    <div class="card p-4">
-      <div class="flex flex-col gap-3 sm:flex-row sm:items-center">
-        <input
-          v-model="inviteEmail"
-          class="input flex-1 bg-white text-slate-900 placeholder-slate-400 border-slate-300"
-          placeholder="Invite email (optional)"
-        />
-        <button class="btn btn-primary" @click="createInvite">Create invite</button>
-        <input
-          v-if="inviteLink"
-          :value="inviteLink"
-          readonly
-          class="input sm:w-[360px] bg-white text-slate-900 border-slate-300"
-        />
-      </div>
-    </div>
+        <!-- Modal Body -->
+        <div class="p-6 space-y-6 max-h-[75vh] overflow-y-auto">
+          
+          <!-- Create Tag -->
+          <div>
+            <label class="block text-sm font-semibold text-slate-700 mb-2">Create Tag</label>
+            <div class="flex flex-col gap-2 sm:flex-row sm:items-center">
+              <input
+                v-model="newTagName"
+                class="input flex-1 bg-white text-slate-900 placeholder-slate-400 border-slate-300"
+                placeholder="New tag name (e.g. Bug, Feature)"
+                @keyup.enter="addTag"
+              />
+              <button class="btn btn-primary whitespace-nowrap" @click="addTag">Add Tag</button>
+            </div>
+          </div>
 
-    <!-- Add Column -->
-    <div class="card p-4">
-      <div class="flex flex-col gap-3 sm:flex-row sm:items-center">
-        <input
-          v-model="newColTitle"
-          class="input flex-1 bg-white text-slate-900 placeholder-slate-400 border-slate-300"
-          placeholder="New column name"
-          @keyup.enter="addColumn"
-        />
-        <button class="btn btn-primary" @click="addColumn">Add column</button>
+          <!-- Invite -->
+          <div>
+            <label class="block text-sm font-semibold text-slate-700 mb-2">Invite Members</label>
+            <div class="flex flex-col gap-2 sm:flex-row sm:items-center">
+              <input
+                v-model="inviteEmail"
+                class="input flex-1 bg-white text-slate-900 placeholder-slate-400 border-slate-300"
+                placeholder="Invite email (optional)"
+              />
+              <button class="btn btn-primary whitespace-nowrap" @click="createInvite">Create invite</button>
+            </div>
+            <div v-if="inviteLink" class="mt-3">
+              <p class="text-xs text-slate-500 mb-1">Send this link to the invitee:</p>
+              <input
+                :value="inviteLink"
+                readonly
+                class="input w-full bg-slate-200 text-slate-800 border-slate-300 text-sm"
+                @focus="($event.target as HTMLInputElement).select()"
+              />
+            </div>
+          </div>
+
+          <!-- Add Column -->
+          <div>
+            <label class="block text-sm font-semibold text-slate-700 mb-2">Add Column</label>
+            <div class="flex flex-col gap-2 sm:flex-row sm:items-center">
+              <input
+                v-model="newColTitle"
+                class="input flex-1 bg-white text-slate-900 placeholder-slate-400 border-slate-300"
+                placeholder="New column name (e.g. In Progress)"
+                @keyup.enter="addColumn"
+              />
+              <button class="btn btn-primary whitespace-nowrap" @click="addColumn">Add Column</button>
+            </div>
+          </div>
+
+        </div>
+        
+        <!-- Modal Footer -->
+        <div class="px-6 py-4 border-t border-slate-200 bg-slate-100 flex justify-end">
+          <button class="btn btn-ghost" @click="showAddModal = false">Done</button>
+        </div>
       </div>
     </div>
 
@@ -336,7 +371,7 @@ async function toggleAssignee(taskId: string, userId: string, on: boolean){
                     <label v-for="tg in tags" :key="tg.id" class="flex items-center gap-2 text-sm">
                       <input
                         type="checkbox"
-                        :checked="t.taskTags?.some((x)=>x.tag.id===tg.id)"
+                        :checked="t.taskTags?.some((x: any)=>x.tag.id===tg.id)"
                         @change="toggleTag(t.id, tg.id, ($event.target as HTMLInputElement).checked)"
                       />
                       <span
