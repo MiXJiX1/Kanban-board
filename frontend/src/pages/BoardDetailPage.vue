@@ -4,6 +4,8 @@ import { useRoute, useRouter } from "vue-router";
 import { api } from "../api/client";
 import draggable from "vuedraggable";
 
+import { useAppStore } from "../stores/appStore";
+
 /* ---------- Types ---------- */
 type Tag   = { id: string; name: string; color: string };
 type User  = { id: string; email: string };
@@ -20,6 +22,7 @@ type Board = { id: string; title: string; columns: Column[]; tags: Tag[]; member
 /* ---------- State ---------- */
 const route = useRoute();
 const router = useRouter();
+const store = useAppStore();
 
 function goBack() {
   if (window.history.length > 1) router.back();
@@ -43,6 +46,12 @@ const editText  = ref("");
 
 /* ---------- Load ---------- */
 async function load(){
+  // Optimistic UI: Preload if available in store
+  const cached = store.boards.find(b => b.id === route.params.id);
+  if (cached && !board.value) {
+    board.value = cached as any;
+  }
+  
   const data: Board = (await api.get(`/boards/${route.params.id}`)).data;
   board.value = data;
   tags.value  = data.tags ?? [];
