@@ -4,11 +4,15 @@ import { useRoute, useRouter } from "vue-router";
 import { api } from "../api/client";
 import draggable from "vuedraggable";
 
+const vFocus = {
+  mounted: (el: HTMLElement) => el.focus()
+};
+
 import { useAppStore } from "../stores/appStore";
 
 /* ---------- Types ---------- */
 type Tag   = { id: string; name: string; color: string };
-type User  = { id: string; email: string };
+type User  = { id: string; email: string; avatar?: string };
 type Member = { user: User };
 type Assignee = { user: User };
 type Task  = {
@@ -56,6 +60,7 @@ const labelColors = [
 
 const editing   = ref<{type:"task"|"col"; id:string}|null>(null);
 const editText  = ref("");
+const showTaskInput = ref<Record<string, boolean>>({});
 
 /* ---------- Load ---------- */
 async function load(){
@@ -109,10 +114,19 @@ async function saveBoardTitle(){
 
 async function addTask(col: Column){
   const title = (newTaskTitle.value[col.id] || "").trim();
-  if(!title) return;
+  if(!title) {
+    showTaskInput.value[col.id] = false;
+    return;
+  }
   await api.post(`/columns/${col.id}/tasks`, { title, position: col.tasks.length });
   newTaskTitle.value[col.id] = "";
+  showTaskInput.value[col.id] = false;
   await load();
+}
+
+function startAddTask(col: Column) {
+  showTaskInput.value[col.id] = true;
+  newTaskTitle.value[col.id] = "";
 }
 
 /* Drag & drop */
@@ -199,55 +213,107 @@ async function toggleAssignee(taskId: string, userId: string, on: boolean){
 </script>
 
 <template>
-  <section v-if="board" class="space-y-6 p-4">
-    <!-- Header -->
-    <div class="flex flex-wrap items-center gap-3">
-      <template v-if="!renaming">
-        <!-- ปุ่มย้อนกลับ -->
-        <button class="btn btn-ghost" @click="goBack" aria-label="Back">
-          <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-1" viewBox="0 0 24 24" fill="currentColor">
-            <path d="M10.828 12l4.95-4.95-1.414-1.414L8 12l6.364 6.364 1.414-1.414z"/>
+  <section v-if="board" class="space-y-8 p-0">
+    <!-- Header Refined -->
+    <div class="px-6 pt-6">
+      <div class="flex items-center gap-2 mb-4">
+        <div class="flex items-center gap-2 px-3 py-1 bg-indigo-500/10 text-indigo-500 rounded-full text-[10px] font-black uppercase tracking-[0.2em] border border-indigo-500/20 glow-indigo">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" viewBox="0 0 20 20" fill="currentColor">
+            <path fill-rule="evenodd" d="M11.3 1.046A1 1 0 0112 2v5h4a1 1 0 01.82 1.573l-7 10A1 1 0 018 18v-5H4a1 1 0 01-.82-1.573l7-10a1 1 0 011.12-.38z" clip-rule="evenodd" />
           </svg>
-          <span class="hidden sm:inline">Back</span>
-        </button>
+          Active Sprint
+        </div>
+      </div>
+      
+      <div class="flex flex-col md:flex-row md:items-end justify-between gap-6">
+        <div class="max-w-2xl">
+          <h1 class="text-5xl font-black text-[var(--text-primary)] tracking-tight mb-3">{{ board.title }}</h1>
+          <p class="text-[var(--text-secondary)] font-medium leading-relaxed max-w-lg">
+            Coordinate with your team, track progress, and ship features faster with our premium Kanban experience.
+          </p>
+        </div>
+        
+        <!-- Stacked Avatars -->
+        <div class="flex items-center group cursor-pointer">
+          <div class="flex -space-x-3 overflow-hidden p-1">
+            <div v-for="(u, i) in members.slice(0, 5)" :key="u.id" 
+              class="inline-block h-12 w-12 rounded-2xl ring-4 ring-[var(--bg-main)] bg-[var(--bg-surface)] overflow-hidden shadow-sm transition-transform hover:-translate-y-1"
+              :style="{ zIndex: 10 - i }"
+            >
+              <img v-if="u.avatar" :src="u.avatar" class="h-full w-full object-cover" />
+              <div v-else class="h-full w-full grid place-items-center bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600 dark:text-indigo-400 font-bold text-sm uppercase">
+                {{ u.email[0] }}
+              </div>
+            </div>
+            <div v-if="members.length > 5" class="inline-flex h-12 w-12 items-center justify-center rounded-2xl bg-[var(--bg-surface)] text-xs font-black text-[var(--text-secondary)] ring-4 ring-[var(--bg-main)] shadow-sm">
+              +{{ members.length - 5 }}
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
 
-        <h2 class="text-2xl font-bold text-slate-800">{{ board.title }}</h2>
-        <button class="btn bg-white text-slate-700 border-slate-200 hover:bg-slate-50" @click="showAddModal = true">
-          <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+    <!-- Toolbar -->
+    <div class="flex items-center gap-4 px-6 border-b border-[var(--border-color)] pb-6">
+      <template v-if="!renaming">
+        <button class="p-2.5 rounded-xl text-slate-400 hover:bg-[var(--bg-surface)] hover:text-indigo-500 border border-transparent hover:border-[var(--border-color)] transition-all duration-300" @click="goBack" title="Back">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7" />
           </svg>
-          Board Options
         </button>
-        <button class="btn btn-outline" @click="startRenameBoard">Rename</button>
-        <button class="btn btn-danger"  @click="deleteCurrentBoard">Delete</button>
+        <button class="btn btn-primary h-11 px-8 rounded-2xl text-[11px] tracking-widest uppercase font-black" @click="showAddModal = true">
+          Settings
+        </button>
+        <div class="h-6 w-[1px] bg-[var(--border-color)] mx-2"></div>
+        <button class="p-2.5 rounded-xl text-slate-400 hover:text-indigo-600 hover:bg-slate-50 dark:hover:bg-slate-900/50 transition-all" @click="startRenameBoard" title="Rename Board">
+           <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+          </svg>
+        </button>
+        <button class="p-2.5 rounded-xl text-rose-300 hover:text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-900/20 transition-all" @click="deleteCurrentBoard" title="Delete Board">
+           <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+          </svg>
+        </button>
       </template>
       <template v-else>
-        <input
-          v-model="boardTitle"
-          class="input w-72 bg-white text-slate-900 placeholder-slate-400 border-slate-300"
-          placeholder="Board title"
-          @keyup.enter="saveBoardTitle"
-        />
-        <button class="btn btn-primary" @click="saveBoardTitle">Save</button>
-        <button class="btn btn-ghost"    @click="renaming=false">Cancel</button>
+        <div class="flex items-center gap-3 bg-[var(--bg-surface)] p-1.5 rounded-2xl shadow-sm border border-[var(--border-color)]">
+          <input
+            v-model="boardTitle"
+            class="input border-none focus:ring-0 w-64 text-sm font-bold bg-transparent"
+            placeholder="Board title"
+            @keyup.enter="saveBoardTitle"
+          />
+          <button class="btn btn-primary h-9 px-4 rounded-xl text-[10px] tracking-widest uppercase" @click="saveBoardTitle">Save</button>
+          <button class="p-2 text-slate-400 hover:text-slate-600 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800" @click="renaming=false">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        </div>
       </template>
     </div>
 
-    <!-- Board Options Modal -->
-    <div v-if="showAddModal" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm" @click="showAddModal = false">
-      <div class="bg-white rounded-2xl w-full max-w-xl shadow-2xl overflow-hidden relative border border-slate-200" @click.stop>
+    <!-- Board Options Modal Refined -->
+    <div v-if="showAddModal" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm animate-in fade-in duration-300" @click="showAddModal = false">
+      <div class="w-full max-w-2xl rounded-[32px] bg-white dark:bg-slate-900 shadow-[0_20px_60px_-15px_rgba(0,0,0,0.1)] dark:shadow-2xl overflow-hidden relative border border-slate-200 dark:border-slate-800 animate-in zoom-in-95 duration-300" @click.stop>
+        <!-- Modal Top Glow (Premium Detail) -->
+        <div class="absolute -top-24 -left-24 h-48 w-48 bg-indigo-500/10 blur-[80px] rounded-full pointer-events-none"></div>
         
-        <!-- Modal Header -->
-        <div class="flex items-center justify-between px-6 py-4 border-b border-slate-100">
-          <div class="flex items-center gap-2">
-            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-indigo-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-            </svg>
-            <h3 class="text-lg font-bold text-slate-800">Board Options</h3>
+        <!-- Modal Header (More Compact) -->
+        <div class="flex items-center justify-between px-10 py-6">
+          <div class="flex items-center gap-4">
+            <div class="h-12 w-12 rounded-2xl bg-indigo-600 flex items-center justify-center text-white shadow-lg glow-indigo">
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+              </svg>
+            </div>
+            <div>
+              <h3 class="text-2xl font-black text-[var(--text-primary)] tracking-tight">Board Settings</h3>
+              <p class="text-sm font-medium text-[var(--text-secondary)]">Customize your workspace experience.</p>
+            </div>
           </div>
-          <button @click="showAddModal = false" class="p-2 rounded-lg hover:bg-slate-100 text-slate-400 hover:text-slate-600 transition">
+          <button @click="showAddModal = false" class="p-3 rounded-2xl hover:bg-slate-100 dark:hover:bg-white/10 text-slate-400 transition-colors">
             <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
             </svg>
@@ -255,13 +321,13 @@ async function toggleAssignee(taskId: string, userId: string, on: boolean){
         </div>
 
         <!-- Tabs -->
-        <div class="flex px-6 border-b border-slate-100 overflow-x-auto no-scrollbar">
+        <div class="flex px-10 border-b border-[var(--border-color)] overflow-x-auto no-scrollbar">
           <button 
             v-for="tab in ['tags', 'invite', 'columns']" 
             :key="tab"
             @click="activeTab = tab"
-            class="px-4 py-3 text-sm font-semibold transition-colors whitespace-nowrap border-b-2"
-            :class="activeTab === tab ? 'text-indigo-600 border-indigo-600' : 'text-slate-500 border-transparent hover:text-slate-700'"
+            class="px-5 py-4 text-[11px] font-black uppercase tracking-widest transition-all whitespace-nowrap border-b-2 outline-none focus:outline-none"
+            :class="activeTab === tab ? 'text-indigo-500 border-indigo-500' : 'text-[var(--text-secondary)] border-transparent hover:text-[var(--text-primary)]'"
           >
             {{ tab.charAt(0).toUpperCase() + tab.slice(1).replace('tags', 'Manage Tags').replace('invite', 'Invite Team').replace('columns', 'Column Settings') }}
           </button>
@@ -273,8 +339,8 @@ async function toggleAssignee(taskId: string, userId: string, on: boolean){
           <div v-if="activeTab === 'tags'" class="space-y-6">
             <div>
               <div class="flex justify-between items-center mb-3">
-                <label class="block text-[10px] font-bold text-slate-400 uppercase tracking-widest">Label Colors</label>
-                <span class="text-[9px] font-bold text-slate-400 uppercase tracking-widest">Select a base color</span>
+                <label class="block text-[10px] font-bold text-[var(--text-secondary)] uppercase tracking-widest">Label Colors</label>
+                <span class="text-[9px] font-bold text-[var(--text-secondary)] uppercase tracking-widest">Select a base color</span>
               </div>
               <div class="flex flex-wrap gap-3">
                 <button 
@@ -284,17 +350,17 @@ async function toggleAssignee(taskId: string, userId: string, on: boolean){
                   class="w-9 h-9 rounded-full transition-transform hover:scale-110 relative"
                   :style="{ backgroundColor: color.value }"
                 >
-                  <div v-if="selectedColor === color.value" class="absolute inset-[-4px] border-2 border-indigo-500 rounded-full"></div>
+                  <div v-if="selectedColor === color.value" class="absolute inset-[-4px] border-2 border-white ring-4 ring-indigo-500/30 rounded-full"></div>
                 </button>
               </div>
             </div>
 
             <div>
-              <label class="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2">Tag Label Name</label>
+              <label class="block text-[10px] font-bold text-[var(--text-secondary)] uppercase tracking-widest mb-2">Tag Label Name</label>
               <div class="flex gap-2">
                 <input
                   v-model="newTagName"
-                  class="input flex-1 border-slate-200 bg-slate-50/50"
+                  class="input flex-1 bg-slate-50 dark:bg-slate-950/50 border border-slate-200 dark:border-slate-800 focus:bg-white dark:focus:bg-slate-900 transition-all font-medium text-[13px] h-11"
                   placeholder="e.g. High Priority, Marketing, Bug..."
                   @keyup.enter="addTag"
                 />
@@ -302,7 +368,7 @@ async function toggleAssignee(taskId: string, userId: string, on: boolean){
             </div>
 
             <div>
-              <label class="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-3">Existing Tags</label>
+              <label class="block text-[10px] font-bold text-[var(--text-secondary)] uppercase tracking-widest mb-3">Existing Tags</label>
               <div class="flex flex-wrap gap-2">
                 <div 
                   v-for="tg in tags" 
@@ -322,43 +388,42 @@ async function toggleAssignee(taskId: string, userId: string, on: boolean){
             </div>
           </div>
 
-          <!-- Invite Team Tab -->
           <div v-else-if="activeTab === 'invite'" class="space-y-6">
             <div>
-              <label class="block text-sm font-semibold text-slate-700 mb-2">Invite by Email</label>
-              <p class="text-xs text-slate-500 mb-4">Users will receive an invitation to join this board.</p>
+              <label class="block text-sm font-black text-[var(--text-primary)] uppercase tracking-tight mb-2">Invite by Email</label>
+              <p class="text-xs font-medium text-[var(--text-secondary)] mb-4">Users will receive an invitation to join this board.</p>
               <div class="flex flex-col gap-2 sm:flex-row sm:items-center">
                 <input
                   v-model="inviteEmail"
-                  class="input flex-1 border-slate-200"
+                  class="input flex-1 bg-slate-50 dark:bg-slate-950/50 border border-slate-200 dark:border-slate-800 focus:bg-white dark:focus:bg-slate-900 transition-all font-medium text-[13px] h-11"
                   placeholder="name@example.com"
                 />
                 <button class="btn btn-primary" @click="createInvite">Send Invite</button>
               </div>
             </div>
 
-            <div v-if="inviteLink" class="p-4 bg-slate-50 rounded-xl border border-slate-100">
-              <label class="block text-xs font-bold text-slate-500 uppercase mb-2">Shareable Link</label>
+            <div v-if="inviteLink" class="p-4 bg-[var(--bg-main)]/50 rounded-2xl border border-[var(--border-color)]">
+              <label class="block text-[10px] font-black text-[var(--text-secondary)] uppercase tracking-widest mb-3">Shareable Link</label>
               <div class="flex gap-2">
                 <input
                   :value="inviteLink"
                   readonly
-                  class="input flex-1 bg-white border-slate-200 text-xs"
+                  class="input flex-1 bg-[var(--bg-card)] text-xs"
                   @focus="($event.target as HTMLInputElement).select()"
                 />
               </div>
-              <p class="text-[10px] text-slate-400 mt-2">Anyone with this link can join the board.</p>
+              <p class="text-[10px] font-medium text-[var(--text-secondary)] mt-3">Anyone with this link can join the board.</p>
             </div>
           </div>
 
           <!-- Column Settings Tab -->
           <div v-else-if="activeTab === 'columns'" class="space-y-6">
             <div>
-              <label class="block text-sm font-semibold text-slate-700 mb-2">New Column</label>
+              <label class="block text-sm font-black text-[var(--text-primary)] uppercase tracking-tight mb-2">New Column</label>
               <div class="flex flex-col gap-2 sm:flex-row sm:items-center">
                 <input
                   v-model="newColTitle"
-                  class="input flex-1 border-slate-200"
+                  class="input flex-1 bg-slate-50 dark:bg-slate-950/50 border border-slate-200 dark:border-slate-800 focus:bg-white dark:focus:bg-slate-900 transition-all font-medium text-[13px] h-11"
                   placeholder="e.g. Done, Quality Assurance..."
                   @keyup.enter="addColumn"
                 />
@@ -367,10 +432,10 @@ async function toggleAssignee(taskId: string, userId: string, on: boolean){
             </div>
 
             <div>
-              <label class="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-2">Current Columns</label>
-              <div class="divide-y divide-slate-100">
-                <div v-for="col in board.columns" :key="col.id" class="py-3 flex items-center justify-between">
-                  <span class="text-sm font-medium text-slate-700">{{ col.title }}</span>
+              <label class="block text-[10px] font-black text-[var(--text-secondary)] uppercase tracking-widest mb-3">Current Columns</label>
+              <div class="divide-y divide-[var(--border-color)]">
+                <div v-for="col in board.columns" :key="col.id" class="py-4 flex items-center justify-between group/colitem">
+                  <span class="text-sm font-bold text-[var(--text-primary)]">{{ col.title }}</span>
                   <div class="flex gap-2">
                     <button @click="startEditCol(col)" class="text-xs text-indigo-600 hover:underline">Rename</button>
                     <button @click="delCol(col)" class="text-xs text-rose-600 hover:underline">Delete</button>
@@ -383,40 +448,40 @@ async function toggleAssignee(taskId: string, userId: string, on: boolean){
         </div>
         
         <!-- Modal Footer -->
-        <div class="px-6 py-4 border-t border-slate-100 bg-slate-50/50 flex justify-end gap-3">
-          <button class="px-4 py-2 text-sm font-semibold text-slate-600 hover:text-slate-800 transition" @click="showAddModal = false">Discard</button>
+        <div class="px-10 py-5 border-t border-[var(--border-color)] bg-slate-50 dark:bg-slate-900/50 flex justify-end gap-3 mt-4">
+          <button class="px-6 py-2 text-[11px] font-black uppercase tracking-widest text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-all" @click="showAddModal = false">Discard</button>
           <button class="btn btn-primary px-6" @click="addTag(); showAddModal = false" v-if="activeTab === 'tags' && newTagName">Save Changes</button>
           <button class="btn btn-primary px-6" @click="showAddModal = false" v-else>Done</button>
         </div>
       </div>
     </div>
 
-    <!-- Columns (draggable) -->
+    <!-- Columns (Refined) -->
     <draggable
       v-model="board.columns"
       group="columns"
       item-key="id"
-      class="grid gap-4 md:grid-cols-3"
+      class="flex gap-8 overflow-x-auto pb-10 no-scrollbar h-[calc(100vh-320px)] px-6"
       @change="onColsChange"
     >
       <template #item="{ element: col }">
-        <div class="rounded-2xl border border-slate-200 bg-white text-slate-900 p-4 shadow">
-          <div class="flex items-center gap-2">
-            <strong v-if="!(editing && editing.type==='col' && editing.id===col.id)" class="truncate">
-              {{ col.title }}
-            </strong>
-            <template v-else>
-              <input
-                v-model="editText"
-                class="input bg-white text-slate-900 placeholder-slate-400 border-slate-300"
-                @keyup.enter="saveEdit"
-              />
-              <button class="btn btn-primary" @click="saveEdit">Save</button>
-            </template>
-            <div class="ml-auto flex gap-2">
-              <button class="btn btn-outline" @click="startEditCol(col)">Rename</button>
-              <button class="btn btn-danger"  @click="delCol(col)">Delete</button>
+        <div class="flex-shrink-0 w-[340px] flex flex-col h-full bg-[var(--bg-surface)]/40 backdrop-blur-sm rounded-[32px] p-3 border border-[var(--border-color)]">
+          
+          <!-- Column Header -->
+          <div class="flex items-center justify-between px-3 py-2 mb-6 group/col">
+            <div class="flex items-center gap-3">
+              <span class="text-[12px] font-black tracking-[0.2em] text-[var(--text-primary)] uppercase flex items-center gap-3">
+                {{ col.title }}
+                <span class="px-2 py-0.5 rounded-lg bg-[var(--bg-main)] text-[var(--text-secondary)] font-black text-[10px] min-w-[20px] text-center border border-[var(--border-color)] shadow-sm">
+                  {{ col.tasks.length }}
+                </span>
+              </span>
             </div>
+            <button @click="startAddTask(col)" class="p-2 rounded-xl text-slate-400 hover:bg-indigo-500/10 hover:text-indigo-500 transition-all opacity-0 group-hover/col:opacity-100">
+               <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4" />
+              </svg>
+            </button>
           </div>
 
           <!-- Tasks -->
@@ -424,102 +489,113 @@ async function toggleAssignee(taskId: string, userId: string, on: boolean){
             v-model="col.tasks"
             group="tasks"
             item-key="id"
-            class="mt-3"
+            class="flex-1 space-y-4 overflow-y-auto no-scrollbar pb-4 px-1"
             @change="onTasksChange"
           >
             <template #item="{ element: t }">
-              <div class="rounded-lg border border-slate-200 bg-white p-3 shadow-sm mt-2">
-                <div class="flex items-start gap-2">
-                  <span v-if="!(editing && editing.type==='task' && editing.id===t.id)" class="flex-1">
-                    {{ t.title }}
-                  </span>
-                  <template v-else>
-                    <input
-                      v-model="editText"
-                      class="input bg-white text-slate-900 placeholder-slate-400 border-slate-300"
-                      @keyup.enter="saveEdit"
-                    />
-                    <button class="btn btn-primary" @click="saveEdit">Save</button>
-                  </template>
-                  <div class="ml-auto flex gap-2">
-                    <button class="btn btn-ghost"  @click="startEditTask(t)">Edit</button>
-                    <button class="btn btn-danger" @click="delTask(t)">Del</button>
-                  </div>
-                </div>
-
-                <!-- current tags -->
-                <div class="mt-2">
-                  <span
-                    v-for="tt in t.taskTags"
-                    :key="tt.tag.id"
-                    class="mr-2 inline-flex items-center rounded-md px-2 py-0.5 text-xs font-medium text-white"
-                    :style="{ background: tt.tag.color }"
-                  >
-                    {{ tt.tag.name }}
-                  </span>
-                </div>
-
-                <!-- current assignees -->
-                <div class="mt-2 flex flex-wrap gap-2">
-                  <span
-                    v-for="a in t.assignees || []"
-                    :key="a.user.id"
-                    class="inline-flex items-center rounded-md bg-slate-100 px-2 py-0.5 text-xs font-medium text-slate-800 border border-slate-200"
-                    title="Assignee"
-                  >
-                    {{ a.user.email }}
-                  </span>
-                </div>
-
-                <!-- tag selector -->
-                <details class="mt-2">
-                  <summary class="cursor-pointer text-sm text-slate-700">Tags</summary>
-                  <div class="mt-2 space-y-1">
-                    <label v-for="tg in tags" :key="tg.id" class="flex items-center gap-2 text-sm">
-                      <input
-                        type="checkbox"
-                        :checked="t.taskTags?.some((x: any)=>x.tag.id===tg.id)"
-                        @change="toggleTag(t.id, tg.id, ($event.target as HTMLInputElement).checked)"
-                      />
-                      <span
-                        class="inline-flex items-center rounded px-1.5 py-0.5 text-white text-xs"
-                        :style="{ background: tg.color }"
-                      >
-                        {{ tg.name }}
-                      </span>
-                    </label>
-                  </div>
-                </details>
-
-                <!-- assignee selector -->
-                <details class="mt-2">
-                  <summary class="cursor-pointer text-sm text-slate-700">Assignees</summary>
-                  <div class="mt-2 space-y-1">
-                    <label
-                      v-for="u in members"
-                      :key="u.id"
-                      class="flex items-center gap-2 text-sm"
+              <div class="task-card !p-5 relative group/card active:scale-[0.98]">
+                
+                <!-- Card Header: Tag -->
+                <div class="flex items-center justify-between mb-4">
+                  <div class="flex gap-2 flex-wrap">
+                    <span
+                      v-for="tt in t.taskTags"
+                      :key="tt.tag.id"
+                      class="px-2.5 py-1 rounded-lg text-[9px] font-black uppercase tracking-wider border"
+                      :style="{ backgroundColor: tt.tag.color + '10', color: tt.tag.color, borderColor: tt.tag.color + '25' }"
                     >
-                      <input
-                        type="checkbox"
-                        :checked="isAssigned(t, u.id)"
-                        @change="toggleAssignee(t.id, u.id, ($event.target as HTMLInputElement).checked)"
-                      />
-                      <span class="text-slate-800">{{ u.email }}</span>
-                    </label>
+                      {{ tt.tag.name }}
+                    </span>
+                    <span v-if="!t.taskTags.length" class="px-2.5 py-1 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-400 text-[9px] font-black uppercase tracking-wider">Default</span>
                   </div>
-                </details>
+                  <button class="p-1.5 text-slate-300 hover:text-indigo-500 opacity-0 group-hover/card:opacity-100 transition-all" @click.stop="startEditTask(t)">
+                     <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 12h.01M12 12h.01M19 12h.01M6 12a1 1 0 11-2 0 1 1 0 012 0zm7 0a1 1 0 11-2 0 1 1 0 012 0zm7 0a1 1 0 11-2 0 1 1 0 012 0z" />
+                      </svg>
+                  </button>
+                </div>
+
+                <!-- Card Body: Title / Edit Input -->
+                <div v-if="editing?.id !== t.id">
+                  <h4 class="text-[15px] font-bold text-[var(--text-primary)] leading-snug mb-4">
+                    {{ t.title }}
+                  </h4>
+                </div>
+                <div v-else class="mb-4">
+                  <input 
+                    v-model="editText" 
+                    autofocus
+                    class="input w-full h-10 px-3 text-[14px] font-bold"
+                    @keyup.enter="saveEdit"
+                    @keyup.esc="editing = null"
+                    @click.stop
+                  />
+                  <div class="flex gap-3 mt-3">
+                    <button @click.stop="saveEdit" class="text-[11px] font-black text-indigo-600 uppercase tracking-widest hover:text-indigo-500">Save</button>
+                    <button @click.stop="editing = null" class="text-[11px] font-black text-slate-400 uppercase tracking-widest hover:text-slate-500">Cancel</button>
+                  </div>
+                </div>
+
+                <!-- Priority / Badge -->
+                <div v-if="t.taskTags.some((tt: any) => tt.tag.name.toLowerCase().includes('bug'))" class="flex items-center gap-2 text-[10px] font-black text-rose-500 mb-5 uppercase tracking-wide">
+                   <span class="h-1.5 w-1.5 rounded-full bg-rose-500 glow-rose animate-pulse"></span>
+                   🚨 High Priority
+                </div>
+
+                <!-- Card Footer -->
+                <div class="flex items-center justify-between pt-4 border-t border-[var(--border-color)]">
+                  <div class="flex items-center gap-4">
+                    <div class="flex items-center gap-1.5 text-slate-400 text-[10px] font-bold">
+                       <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                      </svg>
+                      Oct 12
+                    </div>
+                    
+                    <button @click.stop="delTask(t)" class="p-1.5 text-slate-300 hover:text-rose-500 transition-all opacity-0 group-hover/card:opacity-100">
+                      <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                      </svg>
+                    </button>
+                  </div>
+
+                  <div class="flex -space-x-2">
+                    <div v-for="a in (t.assignees || []).slice(0, 1)" :key="a.user.id" class="h-7 w-7 rounded-lg border-2 border-[var(--bg-card)] bg-slate-100 dark:bg-slate-800 overflow-hidden shadow-sm transition-transform hover:-translate-y-1">
+                      <img v-if="a.user.avatar" :src="a.user.avatar" class="h-full w-full object-cover" />
+                      <div v-else class="h-full w-full grid place-items-center bg-indigo-50 dark:bg-indigo-900/40 text-indigo-600 dark:text-indigo-400 font-bold text-[9px] uppercase">
+                        {{ a.user.email[0] }}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
               </div>
             </template>
           </draggable>
 
-          <div class="mt-3 flex items-center gap-2">
-            <input
-              v-model="newTaskTitle[col.id]"
-              class="input flex-1 bg-white text-slate-900 placeholder-slate-400 border-slate-300"
-              placeholder="New task..."
-            />
-            <button class="btn btn-primary" @click="addTask(col)">Add</button>
+          <!-- Add Task Refined -->
+          <div class="mt-4 p-2">
+             <div v-if="showTaskInput[col.id]" class="bg-[var(--bg-card)] p-4 rounded-2xl border border-indigo-500 shadow-xl mb-3 animate-in fade-in slide-in-from-bottom-2 duration-200">
+                <input 
+                  v-model="newTaskTitle[col.id]"
+                  v-focus
+                  class="w-full px-1 py-1 text-[14px] font-bold text-[var(--text-primary)] bg-transparent outline-none"
+                  placeholder="What needs to be done?"
+                  @keyup.enter="addTask(col)"
+                  @keyup.esc="showTaskInput[col.id] = false"
+                  @blur="!newTaskTitle[col.id] && (showTaskInput[col.id] = false)"
+                />
+                <div class="flex gap-4 mt-4">
+                  <button @click="addTask(col)" class="text-[11px] font-black text-indigo-600 uppercase tracking-widest hover:text-indigo-500">Create</button>
+                  <button @click="showTaskInput[col.id] = false" class="text-[11px] font-black text-slate-400 uppercase tracking-widest hover:text-slate-500">Cancel</button>
+                </div>
+             </div>
+             <button v-else @click="startAddTask(col)" class="w-full py-4 flex items-center justify-center gap-3 text-[11px] font-black text-slate-400 hover:text-indigo-600 hover:bg-slate-50 dark:hover:bg-indigo-950/20 rounded-[20px] transition-all border border-dashed border-transparent hover:border-indigo-500/30 uppercase tracking-widest">
+               <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4" />
+              </svg>
+               Add New Task
+             </button>
           </div>
         </div>
       </template>

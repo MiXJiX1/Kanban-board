@@ -19,7 +19,8 @@ async function login() {
       email: email.value,
       password: password.value,
     });
-    localStorage.setItem("token", data.token);
+    sessionStorage.setItem("token", data.token);
+    sessionStorage.setItem("sessionStartTime", Date.now().toString());
     setToken(data.token);
     router.push("/boards");
   } catch {
@@ -32,24 +33,24 @@ async function login() {
 
 <template>
   <div class="min-h-[calc(100vh-72px)] grid place-items-center">
-    <div class="card w-full max-w-md p-6">
+    <div class="card w-full max-w-md p-6 bg-[var(--bg-card)] border border-[var(--border-color)]">
       <div class="mb-5 text-center">
-        <h1 class="text-2xl font-bold text-slate-900">
+        <h1 class="text-2xl font-bold text-[var(--text-primary)]">
           Welcome back
         </h1>
-        <p class="text-slate-500 text-sm">
+        <p class="text-[var(--text-secondary)] text-sm">
           Sign in to your Kanban Board
         </p>
       </div>
 
       <div class="space-y-3">
         <div>
-          <label class="block text-sm font-medium text-slate-600 dark:text-slate-300 mb-1"
+          <label class="block text-sm font-medium text-[var(--text-secondary)] mb-1"
             >Email</label
           >
           <input
             v-model="email"
-            class="input w-full bg-white text-slate-900 placeholder-slate-400 border-slate-300"
+            class="input w-full bg-[var(--bg-main)]/50 text-[var(--text-primary)] placeholder-slate-500 border-slate-300 dark:border-[var(--border-color)]"
             type="email"
             placeholder="you@example.com"
             @keyup.enter="login"
@@ -57,12 +58,12 @@ async function login() {
         </div>
 
         <div>
-          <label class="block text-sm font-medium text-slate-600 dark:text-slate-300 mb-1"
+          <label class="block text-sm font-medium text-[var(--text-secondary)] mb-1"
             >Password</label
           >
           <input
             v-model="password"
-            class="input w-full bg-white text-slate-900 placeholder-slate-400 border-slate-300"
+            class="input w-full bg-[var(--bg-main)]/50 text-[var(--text-primary)] placeholder-slate-500 border-slate-300 dark:border-[var(--border-color)]"
             type="password"
             placeholder="••••••••"
             @keyup.enter="login"

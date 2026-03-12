@@ -9,6 +9,7 @@ export const useAppStore = defineStore("app", {
     boardsLoaded: false,
     userLoaded: false,
     invitesLoaded: false,
+    isDarkMode: localStorage.getItem("theme") === "dark",
   }),
   actions: {
     async fetchUser(force = false) {
@@ -59,6 +60,10 @@ export const useAppStore = defineStore("app", {
       this.userLoaded = false;
       this.boardsLoaded = false;
       this.invitesLoaded = false;
+    },
+    toggleDarkMode() {
+      this.isDarkMode = !this.isDarkMode;
+      localStorage.setItem("theme", this.isDarkMode ? "dark" : "light");
     }
   }
 });

@@ -150,6 +150,38 @@ app.get("/boards", auth, asyncHandler(async (req: any, res) => {
   res.json([...owned, ...member.map((m) => m.board)]);
 }));
 
+app.get("/boards/overview", auth, asyncHandler(async (req: any, res) => {
+  const userId = req.userId as string;
+  
+  // Fetch boards where user is owner or member
+  const memberships = await prisma.membership.findMany({
+    where: { userId },
+    select: { boardId: true }
+  });
+  const boardIds = memberships.map(m => m.boardId);
+
+  const boards = await prisma.board.findMany({
+    where: { id: { in: boardIds } },
+    include: {
+      columns: {
+        orderBy: { position: "asc" },
+        include: {
+          tasks: {
+            orderBy: { position: "asc" },
+            include: {
+              taskTags: { include: { tag: true } },
+              assignees: { include: { user: { select: { id: true, email: true, avatar: true } } } }
+            }
+          }
+        }
+      }
+    },
+    orderBy: { title: "asc" }
+  });
+
+  res.json(boards);
+}));
+
 app.post("/boards", auth, asyncHandler(async (req: any, res) => {
   const userId = req.userId as string;
   const { title } = req.body as { title: string };
@@ -181,13 +213,13 @@ app.get("/boards/:id", auth, asyncHandler(async (req: any, res) => {
             orderBy: { position: "asc" },
             include: {
               taskTags: { include: { tag: true } },
-              assignees: { include: { user: { select: { id: true, email: true } } } },
+              assignees: { include: { user: { select: { id: true, email: true, avatar: true } } } },
             },
           },
         },
       },
       tags: true,
-      memberships: { include: { user: { select: { id: true, email: true } } } },
+      memberships: { include: { user: { select: { id: true, email: true, avatar: true } } } },
     },
   });
   if (!board) { res.status(404).json({ message: "Board not found" }); return; }

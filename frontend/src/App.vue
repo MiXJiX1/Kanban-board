@@ -1,7 +1,7 @@
 <template>
-  <div class="min-h-screen bg-slate-50 text-slate-900">
+  <div class="min-h-screen transition-colors duration-300">
     <TopBar v-if="!isAuthPage" />
-    <main class="mx-auto w-full max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
+    <main class="mx-auto w-full max-w-screen-2xl px-6 py-8">
       <RouterView v-slot="{ Component }">
         <transition
           name="fade"
@@ -16,20 +16,65 @@
 </template>
 
 <script setup lang="ts">
-import { onMounted, computed } from "vue";
+import { onMounted, computed, watch } from "vue";
 import { useRoute } from "vue-router";
 import TopBar from "./components/TopBar.vue";
 import { setToken } from "./api/client";
+import { useAppStore } from "./stores/appStore";
 
 const route = useRoute();
+const store = useAppStore();
+
 const isAuthPage = computed(() => {
   return route.path === "/login" || route.path === "/register";
 });
 
-onMounted(() => {
-  const token = localStorage.getItem("token");
-  if (token) setToken(token);
+const updateThemeClass = (isDark: boolean) => {
+  if (isDark) {
+    document.documentElement.classList.add("dark");
+  } else {
+    document.documentElement.classList.remove("dark");
+  }
+};
 
+watch(() => store.isDarkMode, (isDark) => {
+  updateThemeClass(isDark);
+});
+
+const checkSession = () => {
+  const token = sessionStorage.getItem("token");
+  const sessionStartTime = sessionStorage.getItem("sessionStartTime");
+
+  if (token && sessionStartTime) {
+    const ONE_HOUR = 3600000;
+    const elapsed = Date.now() - parseInt(sessionStartTime);
+
+    if (elapsed > ONE_HOUR) {
+      sessionStorage.removeItem("token");
+      sessionStorage.removeItem("sessionStartTime");
+      setToken(""); 
+      store.clearAuth();
+      window.location.href = "/login";
+      return true;
+    }
+  }
+  return false;
+};
+
+watch(() => route.path, () => {
+  if (!isAuthPage.value) {
+    checkSession();
+  }
+});
+
+onMounted(() => {
+  const expired = checkSession();
+  if (!expired) {
+    const token = sessionStorage.getItem("token");
+    if (token) setToken(token);
+  }
+
+  updateThemeClass(store.isDarkMode);
   if (!document.title) document.title = "Kanban Board";
 });
 </script>

@@ -4,7 +4,7 @@ export const api = axios.create({
   baseURL: import.meta.env.VITE_API_BASE_URL || "http://127.0.0.1:4000",
 });
 api.interceptors.request.use((cfg) => {
-  const t = localStorage.getItem("token");
+  const t = sessionStorage.getItem("token");
   if (t && cfg.headers) {
     cfg.headers.Authorization = `Bearer ${t}`;
   }
@@ -14,7 +14,7 @@ api.interceptors.response.use(
   (r) => r,
   (err) => {
     if (err.response?.status === 401) {
-      localStorage.removeItem("token");
+      sessionStorage.removeItem("token");
       if (window.location.pathname !== "/login" && window.location.pathname !== "/register") {
         window.location.href = "/login";
       }

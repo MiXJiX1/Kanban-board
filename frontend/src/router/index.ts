@@ -20,7 +20,7 @@ const router = createRouter({
 });
 
 router.beforeEach((to) => {
-  const t = localStorage.getItem("token");
+  const t = sessionStorage.getItem("token");
   if (!t && (to.path.startsWith("/boards") || to.path === "/profile")) return "/login";
 });
 export default router;
