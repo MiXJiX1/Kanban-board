@@ -16,7 +16,7 @@ const allowedOrigins =
   process.env.CORS_ORIGIN ? process.env.CORS_ORIGIN.split(",").map((s) => s.trim()) : true;
 
 app.use(cors({ origin: allowedOrigins, credentials: true }));
-app.use(express.json());
+app.use(express.json({ limit: "5mb" }));
 
 app.get("/health", (_: Request, res: Response) => res.json({ ok: true }));
 
@@ -73,6 +73,45 @@ function auth(req: Request & { userId?: string }, res: Response, next: NextFunct
     return res.status(401).json({ message: "Unauthorized" });
   }
 }
+
+/* --------------------------------- Profile --------------------------------- */
+app.get("/users/me", auth, asyncHandler(async (req: any, res) => {
+  const user = await prisma.user.findUnique({ where: { id: req.userId }, select: { id: true, email: true, avatar: true } });
+  if (!user) { res.status(404).json({ message: "User not found" }); return; }
+  res.json(user);
+}));
+
+app.post("/users/me/avatar", auth, asyncHandler(async (req: any, res) => {
+  const { avatar } = req.body as { avatar?: string };
+  await prisma.user.update({ where: { id: req.userId }, data: { avatar } });
+  res.json({ ok: true });
+}));
+
+app.patch("/auth/change-password", auth, asyncHandler(async (req: any, res) => {
+  const { oldPassword, newPassword } = req.body;
+  if (!oldPassword || !newPassword) { res.status(400).json({ message: "Required" }); return; }
+  
+  const user = await prisma.user.findUnique({ where: { id: req.userId } });
+  if (!user || !(await bcrypt.compare(oldPassword, user.password))) {
+    res.status(400).json({ message: "Invalid old password" }); return;
+  }
+  
+  const hash = await bcrypt.hash(newPassword, 10);
+  await prisma.user.update({ where: { id: req.userId }, data: { password: hash } });
+  res.json({ ok: true });
+}));
+
+app.get("/users/me/invites", auth, asyncHandler(async (req: any, res) => {
+  const user = await prisma.user.findUnique({ where: { id: req.userId } });
+  if (!user) { res.status(404).json({ message: "Not found" }); return; }
+  
+  const items = await prisma.invitation.findMany({
+    where: { email: user.email },
+    include: { board: { select: { title: true } } },
+    orderBy: { expiresAt: "desc" }
+  });
+  res.json(items);
+}));
 
 /* ---------------------------- Helpers / ACL ----------------------------- */
 async function isBoardMember(boardId: string, userId: string) {

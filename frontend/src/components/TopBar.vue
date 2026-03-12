@@ -20,11 +20,19 @@ type Noti = {
 const router = useRouter();
 
 const open = ref(false);
+const profileOpen = ref(false);
 const items = ref<Noti[]>([]);
 const unreadCount = ref(0);
+const user = ref<{ id: string; email: string; avatar: string | null } | null>(null);
 let timer: any = null;
 
 /* ---- fetch / poll ---- */
+async function fetchUser() {
+  try {
+    const { data } = await api.get("/users/me");
+    user.value = data;
+  } catch (e) {}
+}
 async function fetchNoti() {
   const { data } = await getNotifications(true);
   items.value = data;
@@ -64,7 +72,16 @@ async function acceptInvite(n: Noti) {
   }
 }
 
-onMounted(() => { fetchNoti(); startPolling(); });
+function goProfile() {
+  profileOpen.value = false;
+  router.push("/profile");
+}
+function logout() {
+  localStorage.removeItem("token");
+  router.push("/login");
+}
+
+onMounted(() => { fetchUser(); fetchNoti(); startPolling(); });
 onBeforeUnmount(stopPolling);
 </script>
 
@@ -141,6 +158,36 @@ onBeforeUnmount(stopPolling);
                 </div>
               </li>
             </ul>
+          </div>
+        </div>
+
+        <!-- Profile Dropdown -->
+        <div class="relative ml-2">
+          <button 
+            @click="profileOpen = !profileOpen"
+            class="h-8 w-8 rounded-full overflow-hidden border-2 border-slate-700 bg-slate-800 flex items-center justify-center font-bold text-violet-400 hover:border-violet-500 transition-colors"
+          >
+            <img v-if="user?.avatar" :src="user.avatar" class="h-full w-full object-cover" />
+            <span v-else-if="user">{{ user.email[0].toUpperCase() }}</span>
+            <span v-else>K</span>
+          </button>
+
+          <div 
+            v-if="profileOpen" 
+            class="absolute right-0 z-10 mt-2 w-48 rounded-xl border border-white/10 bg-slate-900 shadow-xl overflow-hidden"
+          >
+            <div class="px-4 py-3 border-b border-white/10">
+              <p class="text-xs text-slate-400">Signed in as</p>
+              <p class="text-sm font-semibold text-white truncate">{{ user?.email }}</p>
+            </div>
+            <div class="p-1">
+              <button @click="goProfile" class="w-full text-left px-3 py-2 text-sm text-slate-300 hover:text-white hover:bg-white/10 rounded-lg">
+                Your Profile
+              </button>
+              <button @click="logout" class="w-full text-left px-3 py-2 text-sm text-rose-400 hover:text-rose-300 hover:bg-white/10 rounded-lg">
+                Sign out
+              </button>
+            </div>
           </div>
         </div>
 
