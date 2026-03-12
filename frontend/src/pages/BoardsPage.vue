@@ -101,8 +101,8 @@ onMounted(fetchBoards);
     <!-- Loading skeleton -->
     <div v-if="isLoading" class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
       <div v-for="i in 6" :key="i" class="card p-4 animate-pulse">
-        <div class="h-5 w-2/3 rounded bg-slate-700/40"></div>
-        <div class="mt-3 h-3 w-1/2 rounded bg-slate-700/30"></div>
+        <div class="h-5 w-2/3 rounded bg-slate-200"></div>
+        <div class="mt-3 h-3 w-1/2 rounded bg-slate-100"></div>
       </div>
     </div>
 

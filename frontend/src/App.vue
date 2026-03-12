@@ -1,5 +1,5 @@
 <template>
-  <div class="min-h-screen bg-slate-900">
+  <div class="min-h-screen bg-slate-50 text-slate-900">
     <TopBar v-if="!isAuthPage" />
     <main class="mx-auto w-full max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
       <RouterView v-slot="{ Component }">

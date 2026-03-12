@@ -34,10 +34,10 @@ async function login() {
   <div class="min-h-[calc(100vh-72px)] grid place-items-center">
     <div class="card w-full max-w-md p-6">
       <div class="mb-5 text-center">
-        <h1 class="text-2xl font-semibold text-slate-900 dark:text-white">
+        <h1 class="text-2xl font-bold text-slate-900">
           Welcome back
         </h1>
-        <p class="text-slate-600 dark:text-slate-300 text-sm">
+        <p class="text-slate-500 text-sm">
           Sign in to your Kanban Board
         </p>
       </div>

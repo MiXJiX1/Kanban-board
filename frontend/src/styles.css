@@ -16,4 +16,6 @@
   .col-card { @apply card p-3 w-[360px]; }
   .task-card { @apply card p-3 my-2; }
   .pill { @apply inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium text-white; }
+  .no-scrollbar::-webkit-scrollbar { display: none; }
+  .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
 }

@@ -87,12 +87,12 @@ onBeforeUnmount(stopPolling);
 </script>
 
 <template>
-  <header class="border-b border-slate-200/20 bg-slate-900/60 backdrop-blur">
+  <header class="border-b border-slate-200 bg-white/80 backdrop-blur-md sticky top-0 z-40">
     <div class="container flex h-14 items-center justify-between">
       <!-- Left -->
       <router-link to="/" class="flex items-center gap-2 group hover:opacity-80 transition-opacity cursor-pointer">
-        <div class="grid h-7 w-7 place-items-center rounded-lg bg-violet-600 font-semibold text-white group-hover:scale-105 transition-transform">K</div>
-        <span class="font-semibold text-white">Kanban Board</span>
+        <div class="grid h-7 w-7 place-items-center rounded-lg bg-indigo-600 font-semibold text-white group-hover:scale-105 transition-transform">K</div>
+        <span class="font-semibold text-slate-900">Kanban Board</span>
       </router-link>
 
       <!-- Right -->

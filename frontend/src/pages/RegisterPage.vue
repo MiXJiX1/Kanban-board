@@ -41,17 +41,17 @@ async function register() {
   <div class="min-h-[calc(100vh-72px)] grid place-items-center">
     <div class="card w-full max-w-md p-6">
       <div class="mb-5 text-center">
-        <h1 class="text-2xl font-semibold text-slate-900 dark:text-white">
-          Create your account
+        <h1 class="text-2xl font-bold text-slate-900">
+          Create account
         </h1>
-        <p class="text-slate-600 dark:text-slate-300 text-sm">
-          Join Kanban Board in seconds
+        <p class="text-slate-500 text-sm">
+          Join the Kanban Board today
         </p>
       </div>
 
       <div class="space-y-3">
         <div>
-          <label class="block text-sm font-medium text-slate-600 dark:text-slate-300 mb-1">
+          <label class="block text-sm font-medium text-slate-600 mb-1">
             Email
           </label>
           <input

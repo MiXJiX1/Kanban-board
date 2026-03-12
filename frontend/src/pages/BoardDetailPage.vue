@@ -41,6 +41,18 @@ const newTagName    = ref("");
 const renaming  = ref(false);
 const boardTitle= ref("");
 const showAddModal = ref(false);
+const activeTab = ref("tags"); // tags, invite, columns
+const selectedColor = ref("#3b82f6");
+
+const labelColors = [
+  { name: 'Red', value: '#ef4444' },
+  { name: 'Orange', value: '#f97316' },
+  { name: 'Yellow', value: '#f59e0b' },
+  { name: 'Green', value: '#10b981' },
+  { name: 'Blue', value: '#3b82f6' },
+  { name: 'Indigo', value: '#6366f1' },
+  { name: 'Purple', value: '#a855f7' },
+];
 
 const editing   = ref<{type:"task"|"col"; id:string}|null>(null);
 const editText  = ref("");
@@ -158,8 +170,16 @@ async function createInvite(){
 /* Tags */
 async function addTag(){
   if(!newTagName.value.trim()) return;
-  const t: Tag = (await api.post(`/boards/${route.params.id}/tags`, { name: newTagName.value.trim() })).data;
+  const t: Tag = (await api.post(`/boards/${route.params.id}/tags`, { 
+    name: newTagName.value.trim(),
+    color: selectedColor.value 
+  })).data;
   tags.value.push(t); newTagName.value="";
+}
+async function removeTag(tagId: string) {
+  await api.delete(`/boards/${route.params.id}/tags/${tagId}`);
+  tags.value = tags.value.filter(t => t.id !== tagId);
+  await load();
 }
 async function toggleTag(taskId:string, tagId:string, on:boolean){
   if(on) await api.post(`/tasks/${taskId}/tags/${tagId}`);
@@ -191,8 +211,14 @@ async function toggleAssignee(taskId: string, userId: string, on: boolean){
           <span class="hidden sm:inline">Back</span>
         </button>
 
-        <h2 class="text-2xl font-semibold text-white">{{ board.title }}</h2>
-        <button class="btn btn-primary" @click="showAddModal = true">+ Add Options</button>
+        <h2 class="text-2xl font-bold text-slate-800">{{ board.title }}</h2>
+        <button class="btn bg-white text-slate-700 border-slate-200 hover:bg-slate-50" @click="showAddModal = true">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+          </svg>
+          Board Options
+        </button>
         <button class="btn btn-outline" @click="startRenameBoard">Rename</button>
         <button class="btn btn-danger"  @click="deleteCurrentBoard">Delete</button>
       </template>
@@ -208,78 +234,157 @@ async function toggleAssignee(taskId: string, userId: string, on: boolean){
       </template>
     </div>
 
-    <!-- Add Data Modal -->
-    <div v-if="showAddModal" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm" @click="showAddModal = false">
-      <div class="bg-slate-50 rounded-2xl w-full max-w-2xl shadow-2xl overflow-hidden relative" @click.stop>
+    <!-- Board Options Modal -->
+    <div v-if="showAddModal" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm" @click="showAddModal = false">
+      <div class="bg-white rounded-2xl w-full max-w-xl shadow-2xl overflow-hidden relative border border-slate-200" @click.stop>
         
         <!-- Modal Header -->
-        <div class="flex items-center justify-between px-6 py-4 border-b border-slate-200 bg-white">
-          <h3 class="text-lg font-bold text-slate-800">Board Options</h3>
-          <button @click="showAddModal = false" class="text-slate-400 hover:text-slate-700 transition">
+        <div class="flex items-center justify-between px-6 py-4 border-b border-slate-100">
+          <div class="flex items-center gap-2">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-indigo-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+            </svg>
+            <h3 class="text-lg font-bold text-slate-800">Board Options</h3>
+          </div>
+          <button @click="showAddModal = false" class="p-2 rounded-lg hover:bg-slate-100 text-slate-400 hover:text-slate-600 transition">
             <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
             </svg>
           </button>
         </div>
 
+        <!-- Tabs -->
+        <div class="flex px-6 border-b border-slate-100 overflow-x-auto no-scrollbar">
+          <button 
+            v-for="tab in ['tags', 'invite', 'columns']" 
+            :key="tab"
+            @click="activeTab = tab"
+            class="px-4 py-3 text-sm font-semibold transition-colors whitespace-nowrap border-b-2"
+            :class="activeTab === tab ? 'text-indigo-600 border-indigo-600' : 'text-slate-500 border-transparent hover:text-slate-700'"
+          >
+            {{ tab.charAt(0).toUpperCase() + tab.slice(1).replace('tags', 'Manage Tags').replace('invite', 'Invite Team').replace('columns', 'Column Settings') }}
+          </button>
+        </div>
+
         <!-- Modal Body -->
-        <div class="p-6 space-y-6 max-h-[75vh] overflow-y-auto">
+        <div class="p-6 h-[400px] overflow-y-auto">
           
-          <!-- Create Tag -->
-          <div>
-            <label class="block text-sm font-semibold text-slate-700 mb-2">Create Tag</label>
-            <div class="flex flex-col gap-2 sm:flex-row sm:items-center">
-              <input
-                v-model="newTagName"
-                class="input flex-1 bg-white text-slate-900 placeholder-slate-400 border-slate-300"
-                placeholder="New tag name (e.g. Bug, Feature)"
-                @keyup.enter="addTag"
-              />
-              <button class="btn btn-primary whitespace-nowrap" @click="addTag">Add Tag</button>
+          <!-- Manage Tags Tab -->
+          <div v-if="activeTab === 'tags'" class="space-y-6">
+            <div>
+              <label class="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-3">Label Colors</label>
+              <div class="flex flex-wrap gap-3">
+                <button 
+                  v-for="color in labelColors" 
+                  :key="color.value"
+                  @click="selectedColor = color.value"
+                  class="w-8 h-8 rounded-full transition-transform hover:scale-110 relative"
+                  :style="{ backgroundColor: color.value }"
+                >
+                  <div v-if="selectedColor === color.value" class="absolute inset-[-4px] border-2 border-indigo-500 rounded-full"></div>
+                </button>
+              </div>
+            </div>
+
+            <div>
+              <label class="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Tag Label Name</label>
+              <div class="flex gap-2">
+                <input
+                  v-model="newTagName"
+                  class="input flex-1 border-slate-200"
+                  placeholder="e.g. High Priority, Marketing, Bug..."
+                  @keyup.enter="addTag"
+                />
+              </div>
+            </div>
+
+            <div>
+              <label class="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-3">Existing Tags</label>
+              <div class="flex flex-wrap gap-2">
+                <div 
+                  v-for="tg in tags" 
+                  :key="tg.id"
+                  class="pill px-3 py-1 flex items-center gap-2"
+                  :style="{ backgroundColor: tg.color + '22', color: tg.color, border: `1px solid ${tg.color}44` }"
+                >
+                  <div class="w-1.5 h-1.5 rounded-full" :style="{ backgroundColor: tg.color }"></div>
+                  {{ tg.name }}
+                  <button @click="removeTag(tg.id)" class="hover:opacity-60">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3" viewBox="0 0 20 20" fill="currentColor">
+                      <path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd" />
+                    </svg>
+                  </button>
+                </div>
+              </div>
             </div>
           </div>
 
-          <!-- Invite -->
-          <div>
-            <label class="block text-sm font-semibold text-slate-700 mb-2">Invite Members</label>
-            <div class="flex flex-col gap-2 sm:flex-row sm:items-center">
-              <input
-                v-model="inviteEmail"
-                class="input flex-1 bg-white text-slate-900 placeholder-slate-400 border-slate-300"
-                placeholder="Invite email (optional)"
-              />
-              <button class="btn btn-primary whitespace-nowrap" @click="createInvite">Create invite</button>
+          <!-- Invite Team Tab -->
+          <div v-else-if="activeTab === 'invite'" class="space-y-6">
+            <div>
+              <label class="block text-sm font-semibold text-slate-700 mb-2">Invite by Email</label>
+              <p class="text-xs text-slate-500 mb-4">Users will receive an invitation to join this board.</p>
+              <div class="flex flex-col gap-2 sm:flex-row sm:items-center">
+                <input
+                  v-model="inviteEmail"
+                  class="input flex-1 border-slate-200"
+                  placeholder="name@example.com"
+                />
+                <button class="btn btn-primary" @click="createInvite">Send Invite</button>
+              </div>
             </div>
-            <div v-if="inviteLink" class="mt-3">
-              <p class="text-xs text-slate-500 mb-1">Send this link to the invitee:</p>
-              <input
-                :value="inviteLink"
-                readonly
-                class="input w-full bg-slate-200 text-slate-800 border-slate-300 text-sm"
-                @focus="($event.target as HTMLInputElement).select()"
-              />
+
+            <div v-if="inviteLink" class="p-4 bg-slate-50 rounded-xl border border-slate-100">
+              <label class="block text-xs font-bold text-slate-500 uppercase mb-2">Shareable Link</label>
+              <div class="flex gap-2">
+                <input
+                  :value="inviteLink"
+                  readonly
+                  class="input flex-1 bg-white border-slate-200 text-xs"
+                  @focus="($event.target as HTMLInputElement).select()"
+                />
+              </div>
+              <p class="text-[10px] text-slate-400 mt-2">Anyone with this link can join the board.</p>
             </div>
           </div>
 
-          <!-- Add Column -->
-          <div>
-            <label class="block text-sm font-semibold text-slate-700 mb-2">Add Column</label>
-            <div class="flex flex-col gap-2 sm:flex-row sm:items-center">
-              <input
-                v-model="newColTitle"
-                class="input flex-1 bg-white text-slate-900 placeholder-slate-400 border-slate-300"
-                placeholder="New column name (e.g. In Progress)"
-                @keyup.enter="addColumn"
-              />
-              <button class="btn btn-primary whitespace-nowrap" @click="addColumn">Add Column</button>
+          <!-- Column Settings Tab -->
+          <div v-else-if="activeTab === 'columns'" class="space-y-6">
+            <div>
+              <label class="block text-sm font-semibold text-slate-700 mb-2">New Column</label>
+              <div class="flex flex-col gap-2 sm:flex-row sm:items-center">
+                <input
+                  v-model="newColTitle"
+                  class="input flex-1 border-slate-200"
+                  placeholder="e.g. Done, Quality Assurance..."
+                  @keyup.enter="addColumn"
+                />
+                <button class="btn btn-primary" @click="addColumn">Add Column</button>
+              </div>
+            </div>
+
+            <div>
+              <label class="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-2">Current Columns</label>
+              <div class="divide-y divide-slate-100">
+                <div v-for="col in board.columns" :key="col.id" class="py-3 flex items-center justify-between">
+                  <span class="text-sm font-medium text-slate-700">{{ col.title }}</span>
+                  <div class="flex gap-2">
+                    <button @click="startEditCol(col)" class="text-xs text-indigo-600 hover:underline">Rename</button>
+                    <button @click="delCol(col)" class="text-xs text-rose-600 hover:underline">Delete</button>
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
 
         </div>
         
         <!-- Modal Footer -->
-        <div class="px-6 py-4 border-t border-slate-200 bg-slate-100 flex justify-end">
-          <button class="btn btn-ghost" @click="showAddModal = false">Done</button>
+        <div class="px-6 py-4 border-t border-slate-100 bg-slate-50/50 flex justify-end gap-3">
+          <button class="px-4 py-2 text-sm font-semibold text-slate-600 hover:text-slate-800 transition" @click="showAddModal = false">Discard</button>
+          <button class="btn btn-primary px-6" @click="addTag(); showAddModal = false" v-if="activeTab === 'tags' && newTagName">Save Changes</button>
+          <button class="btn btn-primary px-6" @click="showAddModal = false" v-else>Done</button>
         </div>
       </div>
     </div>
