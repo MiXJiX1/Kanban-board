@@ -1,12 +1,14 @@
 <script setup lang="ts">
-import { ref, onMounted } from "vue";
+import { ref, onMounted, computed } from "vue";
 import { api } from "../api/client";
 import { useRouter } from "vue-router";
+import { useAppStore } from "../stores/appStore";
 
 const router = useRouter();
+const store = useAppStore();
 
-const user = ref<{ id: string; email: string; avatar: string | null } | null>(null);
-const invites = ref<any[]>([]);
+const user = computed(() => store.user);
+const invites = computed(() => store.invites);
 
 // Password state
 const oldPassword = ref("");
@@ -17,21 +19,11 @@ const passError = ref(false);
 const fileInput = ref<HTMLInputElement | null>(null);
 
 async function fetchProfile() {
-  try {
-    const { data } = await api.get("/users/me");
-    user.value = data;
-  } catch (err) {
-    console.error("Failed to load user", err);
-  }
+  await store.fetchUser();
 }
 
 async function fetchInvites() {
-  try {
-    const { data } = await api.get("/users/me/invites");
-    invites.value = data;
-  } catch (err) {
-    console.error("Failed to load invites", err);
-  }
+  await store.fetchInvites();
 }
 
 async function changePassword() {
@@ -72,8 +64,8 @@ async function uploadAvatar(e: Event) {
     try {
       const base64Str = reader.result as string;
       await api.post("/users/me/avatar", { avatar: base64Str });
-      if (user.value) {
-        user.value.avatar = base64Str;
+      if (store.user) {
+        store.user.avatar = base64Str;
       }
     } catch (err) {
       alert("Failed to upload avatar");

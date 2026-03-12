@@ -3,11 +3,14 @@ import { onMounted, ref, computed, nextTick } from "vue";
 import { api } from "../api/client";
 import { useRouter } from "vue-router";
 
+import { useAppStore } from "../stores/appStore";
+
 type Board = { id: string; title: string };
 
 const router = useRouter();
+const store = useAppStore();
 
-const boards = ref<Board[]>([]);
+const boards = computed(() => store.boards);
 const isLoading = ref(false);
 
 const title = ref("");
@@ -17,12 +20,11 @@ const editingId = ref<string | null>(null);
 const editTitle = ref("");
 
 async function fetchBoards() {
-  try {
+  if (!store.boardsLoaded) {
     isLoading.value = true;
-    boards.value = (await api.get("/boards")).data;
-  } finally {
-    isLoading.value = false;
   }
+  await store.fetchBoards();
+  isLoading.value = false;
 }
 
 async function addBoard() {
@@ -30,7 +32,7 @@ async function addBoard() {
   if (!t) return;
   const { data } = await api.post("/boards", { title: t });
   title.value = "";
-  boards.value.unshift(data);
+  store.boards.unshift(data);
 }
 
 function startEdit(b: Board) {
@@ -47,15 +49,15 @@ async function saveEdit(b: Board) {
   const t = editTitle.value.trim();
   if (!t) { editingId.value = null; return; }
   const { data } = await api.patch(`/boards/${b.id}`, { title: t });
-  const idx = boards.value.findIndex(x => x.id === b.id);
-  if (idx >= 0) boards.value[idx] = data;
+  const idx = store.boards.findIndex(x => x.id === b.id);
+  if (idx >= 0) store.boards[idx] = data;
   editingId.value = null; editTitle.value = "";
 }
 
 async function removeBoard(b: Board) {
   if (!confirm(`Delete board "${b.title}" ?`)) return;
   await api.delete(`/boards/${b.id}`);
-  boards.value = boards.value.filter(x => x.id !== b.id);
+  store.boards = store.boards.filter(x => x.id !== b.id);
 }
 
 function openBoard(b: Board) {

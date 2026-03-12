@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { onMounted, onBeforeUnmount, ref } from "vue";
+import { onMounted, onBeforeUnmount, ref, computed } from "vue";
 import { useRouter } from "vue-router";
 import {
   api,
@@ -7,6 +7,8 @@ import {
   readNotification,
   readAllNotifications,
 } from "../api/client";
+
+import { useAppStore } from "../stores/appStore";
 
 type Noti = {
   id: string;
@@ -18,20 +20,18 @@ type Noti = {
 };
 
 const router = useRouter();
+const store = useAppStore();
 
 const open = ref(false);
 const profileOpen = ref(false);
 const items = ref<Noti[]>([]);
 const unreadCount = ref(0);
-const user = ref<{ id: string; email: string; avatar: string | null } | null>(null);
+const user = computed(() => store.user);
 let timer: any = null;
 
 /* ---- fetch / poll ---- */
 async function fetchUser() {
-  try {
-    const { data } = await api.get("/users/me");
-    user.value = data;
-  } catch (e) {}
+  await store.fetchUser();
 }
 async function fetchNoti() {
   const { data } = await getNotifications(true);
@@ -78,6 +78,7 @@ function goProfile() {
 }
 function logout() {
   localStorage.removeItem("token");
+  store.clearAuth();
   router.push("/login");
 }
 
