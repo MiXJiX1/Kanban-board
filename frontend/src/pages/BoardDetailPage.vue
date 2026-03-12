@@ -270,16 +270,18 @@ async function toggleAssignee(taskId: string, userId: string, on: boolean){
         <!-- Modal Body -->
         <div class="p-6 h-[400px] overflow-y-auto">
           
-          <!-- Manage Tags Tab -->
           <div v-if="activeTab === 'tags'" class="space-y-6">
             <div>
-              <label class="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-3">Label Colors</label>
+              <div class="flex justify-between items-center mb-3">
+                <label class="block text-[10px] font-bold text-slate-400 uppercase tracking-widest">Label Colors</label>
+                <span class="text-[9px] font-bold text-slate-400 uppercase tracking-widest">Select a base color</span>
+              </div>
               <div class="flex flex-wrap gap-3">
                 <button 
                   v-for="color in labelColors" 
                   :key="color.value"
                   @click="selectedColor = color.value"
-                  class="w-8 h-8 rounded-full transition-transform hover:scale-110 relative"
+                  class="w-9 h-9 rounded-full transition-transform hover:scale-110 relative"
                   :style="{ backgroundColor: color.value }"
                 >
                   <div v-if="selectedColor === color.value" class="absolute inset-[-4px] border-2 border-indigo-500 rounded-full"></div>
@@ -288,11 +290,11 @@ async function toggleAssignee(taskId: string, userId: string, on: boolean){
             </div>
 
             <div>
-              <label class="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Tag Label Name</label>
+              <label class="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2">Tag Label Name</label>
               <div class="flex gap-2">
                 <input
                   v-model="newTagName"
-                  class="input flex-1 border-slate-200"
+                  class="input flex-1 border-slate-200 bg-slate-50/50"
                   placeholder="e.g. High Priority, Marketing, Bug..."
                   @keyup.enter="addTag"
                 />
@@ -300,17 +302,17 @@ async function toggleAssignee(taskId: string, userId: string, on: boolean){
             </div>
 
             <div>
-              <label class="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-3">Existing Tags</label>
+              <label class="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-3">Existing Tags</label>
               <div class="flex flex-wrap gap-2">
                 <div 
                   v-for="tg in tags" 
                   :key="tg.id"
-                  class="pill px-3 py-1 flex items-center gap-2"
-                  :style="{ backgroundColor: tg.color + '22', color: tg.color, border: `1px solid ${tg.color}44` }"
+                  class="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg text-[10px] font-bold uppercase tracking-wider transition"
+                  :style="{ backgroundColor: tg.color + '15', color: tg.color, border: `1px solid ${tg.color}30` }"
                 >
                   <div class="w-1.5 h-1.5 rounded-full" :style="{ backgroundColor: tg.color }"></div>
                   {{ tg.name }}
-                  <button @click="removeTag(tg.id)" class="hover:opacity-60">
+                  <button @click="removeTag(tg.id)" class="ml-1 hover:opacity-60">
                     <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3" viewBox="0 0 20 20" fill="currentColor">
                       <path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd" />
                     </svg>
