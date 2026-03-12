@@ -90,10 +90,10 @@ onBeforeUnmount(stopPolling);
   <header class="border-b border-slate-200/20 bg-slate-900/60 backdrop-blur">
     <div class="container flex h-14 items-center justify-between">
       <!-- Left -->
-      <div class="flex items-center gap-2">
-        <div class="grid h-7 w-7 place-items-center rounded-lg bg-violet-600 font-semibold text-white">K</div>
+      <router-link to="/" class="flex items-center gap-2 group hover:opacity-80 transition-opacity cursor-pointer">
+        <div class="grid h-7 w-7 place-items-center rounded-lg bg-violet-600 font-semibold text-white group-hover:scale-105 transition-transform">K</div>
         <span class="font-semibold text-white">Kanban Board</span>
-      </div>
+      </router-link>
 
       <!-- Right -->
       <div class="flex items-center gap-3">
