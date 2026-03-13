@@ -68,7 +68,7 @@ async function acceptInvite(n: Noti) {
     open.value = false;
     router.push(`/boards/${data.boardId}`);
   } catch (e: any) {
-    alert(e?.response?.data?.message || "Accept invite failed");
+    alert(e?.response?.data?.message || "ยอมรับคำเชิญไม่สำเร็จ");
   }
 }
 
@@ -87,15 +87,15 @@ onBeforeUnmount(stopPolling);
 </script>
 
 <template>
-  <header class="glass sticky top-0 z-40 transition-all duration-500 border-b">
-    <div class="mx-auto max-w-screen-2xl flex h-16 items-center justify-between px-6">
+  <header class="glass sticky top-0 z-10 transition-all duration-500 border-b">
+    <div class="w-full flex h-16 items-center justify-between px-6">
       
       <!-- Left: Logo & Title -->
       <router-link to="/boards" class="flex items-center gap-3 group">
         <div class="h-9 w-9 rounded-xl bg-indigo-600 flex items-center justify-center shadow-lg shadow-indigo-200/50 dark:shadow-none glow-indigo group-hover:scale-105 transition-transform">
-          <span class="text-white font-black text-xl italic leading-none select-none">K</span>
+          <span class="text-white font-bold text-xl italic leading-none select-none">K</span>
         </div>
-        <span class="text-xl font-extrabold text-[var(--text-primary)] tracking-tight">Kanban Board</span>
+        <span class="text-xl font-bold text-[var(--text-primary)] tracking-tight">Kanban Board</span>
       </router-link>
 
       <!-- Center/Right: Search, Buttons, Profile -->
@@ -108,21 +108,21 @@ onBeforeUnmount(stopPolling);
           </svg>
           <input 
             type="text" 
-            placeholder="Search tasks..." 
+            placeholder="ค้นหางาน..." 
             class="input pl-10 w-full h-10 text-xs rounded-xl"
           />
         </div>
 
         <!-- Action Icons -->
         <div class="flex items-center gap-3 ml-2">
-          <button class="btn btn-primary px-5 h-10 tracking-widest uppercase text-[10px]">
-            Invite
+          <button class="btn btn-primary px-6 h-11 tracking-widest uppercase text-xs font-medium">
+            เชิญ
           </button>
           
           <button 
             class="p-2.5 rounded-xl text-slate-400 hover:bg-slate-100 dark:hover:bg-white/10 hover:text-slate-900 dark:hover:text-white transition-all duration-300 border border-transparent hover:border-slate-200 dark:hover:border-white/10"
             @click="store.toggleDarkMode()"
-            :title="store.isDarkMode ? 'Switch to Light Mode' : 'Switch to Dark Mode'"
+            :title="store.isDarkMode ? 'เปลี่ยนเป็นโหมดสว่าง' : 'เปลี่ยนเป็นโหมดมืด'"
           >
             <!-- Sun Icon (shown in dark mode) -->
             <svg v-if="store.isDarkMode" xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -140,7 +140,7 @@ onBeforeUnmount(stopPolling);
           <button @click="profileOpen = !profileOpen" class="flex items-center group">
             <div class="h-10 w-10 rounded-xl bg-slate-100 dark:bg-slate-800 border border-[var(--border-color)] shadow-sm overflow-hidden ring-4 ring-transparent group-hover:ring-indigo-500/10 transition-all active:scale-95">
               <img v-if="user?.avatar" :src="user.avatar" class="h-full w-full object-cover" />
-              <div v-else class="h-full w-full grid place-items-center bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 font-bold text-xs">
+              <div v-else class="h-full w-full grid place-items-center bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 font-medium text-xs">
                 {{ user?.email[0].toUpperCase() }}
               </div>
             </div>
@@ -148,14 +148,14 @@ onBeforeUnmount(stopPolling);
 
           <div v-if="profileOpen" class="absolute right-0 top-full mt-3 w-56 rounded-2xl bg-[var(--bg-card)] p-2.5 shadow-2xl border border-[var(--border-color)] flex flex-col z-50 backdrop-blur-xl animate-in fade-in slide-in-from-top-2 duration-200">
             <div class="px-3 py-2 mb-1 border-b border-[var(--border-color)]">
-              <p class="text-xs font-semibold text-[var(--text-secondary)]">Signed in as</p>
-              <p class="text-sm font-bold truncate">{{ user?.email }}</p>
+              <p class="text-xs font-semibold text-[var(--text-secondary)]">ลงชื่อเข้าใช้เป็น</p>
+              <p class="text-sm font-medium truncate">{{ user?.email }}</p>
             </div>
             <button class="flex items-center gap-2 w-full text-left px-3 py-2.5 text-sm font-medium hover:bg-indigo-500/10 hover:text-indigo-500 rounded-xl transition" @click="goProfile">
-               Your Profile
+               โปรไฟล์ของคุณ
             </button>
             <button class="flex items-center gap-2 w-full text-left px-3 py-2.5 text-sm font-medium text-rose-500 hover:bg-rose-500/10 rounded-xl transition" @click="logout">
-               Sign out
+               ออกจากระบบ
             </button>
           </div>
         </div>

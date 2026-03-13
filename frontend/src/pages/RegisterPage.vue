@@ -12,7 +12,7 @@ const errorMsg = ref("");
 
 async function register() {
   if (!email.value.trim() || !password.value.trim()) {
-    errorMsg.value = "Please fill in email and password";
+    errorMsg.value = "กรุณากรอกอีเมลและรหัสผ่าน";
     return;
   }
 
@@ -29,8 +29,8 @@ async function register() {
     errorMsg.value =
       e?.response?.data?.message ||
       (e?.response?.status === 409
-        ? "This email is already registered"
-        : "Register failed");
+        ? "อีเมลนี้ถูกใช้งานไปแล้ว"
+        : "สมัครสมาชิกไม่สำเร็จ");
   } finally {
     loading.value = false;
   }
@@ -42,17 +42,17 @@ async function register() {
     <div class="card w-full max-w-md p-6 bg-[var(--bg-card)] border border-[var(--border-color)]">
       <div class="mb-5 text-center">
         <h1 class="text-2xl font-bold text-[var(--text-primary)]">
-          Create account
+          สร้างบัญชีใหม่
         </h1>
         <p class="text-[var(--text-secondary)] text-sm">
-          Join the Kanban Board today
+          เข้าร่วมกระดานคัมบังวันนี้
         </p>
       </div>
 
       <div class="space-y-3">
         <div>
           <label class="block text-sm font-medium text-[var(--text-secondary)] mb-1">
-            Email
+            อีเมล
           </label>
           <input
             v-model="email"
@@ -60,12 +60,13 @@ async function register() {
             type="email"
             placeholder="you@example.com"
             @keyup.enter="register"
+            autofocus
           />
         </div>
 
         <div>
           <label class="block text-sm font-medium text-[var(--text-secondary)] mb-1">
-            Password
+            รหัสผ่าน
           </label>
           <input
             v-model="password"
@@ -85,14 +86,14 @@ async function register() {
           :disabled="loading"
           @click="register"
         >
-          <span v-if="!loading">Create account</span>
-          <span v-else>Creating…</span>
+          <span v-if="!loading">สร้างบัญชี</span>
+          <span v-else>กำลังสร้าง…</span>
         </button>
 
         <p class="text-center text-sm text-slate-500 dark:text-slate-400">
-          Already have an account?
+          มีบัญชีอยู่แล้วใช่หรือไม่?
           <router-link class="text-violet-400 hover:underline" to="/login">
-            Sign in
+            เข้าสู่ระบบ
           </router-link>
         </p>
       </div>

@@ -115,10 +115,17 @@ app.get("/users/me/invites", auth, asyncHandler(async (req: any, res) => {
 
 /* ---------------------------- Helpers / ACL ----------------------------- */
 async function isBoardMember(boardId: string, userId: string) {
-  const board = await prisma.board.findUnique({ where: { id: boardId }, select: { ownerId: true } });
-  if (!board) return false;
-  if (board.ownerId === userId) return true;
+  const board = await prisma.board.findUnique({ where: { id: boardId }, select: { id: true, ownerId: true } });
+  if (!board) {
+    console.log(`isBoardMember: Board ${boardId} not found`);
+    return false;
+  }
+  if (board.ownerId === userId) {
+    console.log(`isBoardMember: User ${userId} is owner of board ${boardId}`);
+    return true;
+  }
   const m = await prisma.membership.findUnique({ where: { boardId_userId: { boardId, userId } } });
+  console.log(`isBoardMember: Membership for user ${userId} on board ${boardId}: ${!!m}`);
   return !!m;
 }
 async function isBoardOwner(boardId: string, userId: string) {
@@ -195,14 +202,14 @@ app.patch("/boards/:id", auth, asyncHandler(async (req: any, res) => {
   const { id } = req.params as { id: string };
   const { title } = req.body as { title: string };
   if (!title?.trim()) { res.status(400).json({ message: "Title required" }); return; }
-  if (!(await isBoardMember(id, req.userId))) { res.status(403).json({ message: "Forbidden" }); return; }
+  if (!(await isBoardMember(id, req.userId))) { res.status(403).json({ message: `Forbidden: No access to board ${id}` }); return; }
   const updated = await prisma.board.update({ where: { id }, data: { title: title.trim() } });
   res.json(updated);
 }));
 
 app.get("/boards/:id", auth, asyncHandler(async (req: any, res) => {
   const { id } = req.params;
-  if (!(await isBoardMember(id, req.userId))) { res.status(403).json({ message: "Forbidden" }); return; }
+  if (!(await isBoardMember(id, req.userId))) { res.status(403).json({ message: `Forbidden: No access to board ${id} for viewing` }); return; }
   const board = await prisma.board.findUnique({
     where: { id },
     include: {
@@ -257,17 +264,9 @@ app.delete("/boards/:id", auth, asyncHandler(async (req: any, res) => {
 /* -------------------------------- Columns ------------------------------- */
 app.post("/boards/:boardId/columns", auth, asyncHandler(async (req: any, res) => {
   const { boardId } = req.params;
-  if (!(await isBoardMember(boardId, req.userId))) { res.status(403).json({ message: "Forbidden" }); return; }
+  if (!(await isBoardMember(boardId, req.userId))) { res.status(403).json({ message: `Forbidden: No access to board ${boardId} for column creation` }); return; }
   const { title, position } = req.body as { title: string; position: number };
   res.json(await prisma.column.create({ data: { title, boardId, position } }));
-}));
-
-app.patch("/columns/:colId", auth, asyncHandler(async (req: any, res) => {
-  const { colId } = req.params;
-  const boardId = await getBoardIdByColumn(colId);
-  if (!boardId || !(await isBoardMember(boardId, req.userId))) { res.status(403).json({ message: "Forbidden" }); return; }
-  const { title } = req.body as { title: string };
-  res.json(await prisma.column.update({ where: { id: colId }, data: { title } }));
 }));
 
 app.patch("/columns/reorder", auth, asyncHandler(async (req: any, res) => {
@@ -284,17 +283,28 @@ app.patch("/columns/reorder", auth, asyncHandler(async (req: any, res) => {
   // Check membership for all unique boardIds
   const uniqueBoardIds = Array.from(new Set(cols.map(c => c.boardId)));
   for (const bId of uniqueBoardIds) {
-    if (!(await isBoardMember(bId, req.userId))) { res.status(403).json({ message: "Forbidden" }); return; }
+    if (!(await isBoardMember(bId, req.userId))) { 
+      res.status(403).json({ message: `Forbidden: No access to board ${bId} of column` }); 
+      return; 
+    }
   }
 
   await Promise.all(items.map((i) => prisma.column.update({ where: { id: i.id }, data: { position: i.position } })));
   res.json({ ok: true });
 }));
 
+app.patch("/columns/:colId", auth, asyncHandler(async (req: any, res) => {
+  const { colId } = req.params;
+  const boardId = await getBoardIdByColumn(colId);
+  if (!boardId || !(await isBoardMember(boardId, req.userId))) { res.status(403).json({ message: `Forbidden: No access to board ${boardId} of column ${colId}` }); return; }
+  const { title } = req.body as { title: string };
+  res.json(await prisma.column.update({ where: { id: colId }, data: { title } }));
+}));
+
 app.delete("/columns/:colId", auth, asyncHandler(async (req: any, res) => {
   const { colId } = req.params;
   const boardId = await getBoardIdByColumn(colId);
-  if (!boardId || !(await isBoardMember(boardId, req.userId))) { res.status(403).json({ message: "Forbidden" }); return; }
+  if (!boardId || !(await isBoardMember(boardId, req.userId))) { res.status(403).json({ message: `Forbidden: No access to board ${boardId} for column deletion` }); return; }
   await prisma.task.deleteMany({ where: { columnId: colId } });
   await prisma.column.delete({ where: { id: colId } });
   res.json({ ok: true });
@@ -304,36 +314,20 @@ app.delete("/columns/:colId", auth, asyncHandler(async (req: any, res) => {
 app.post("/columns/:colId/tasks", auth, asyncHandler(async (req: any, res) => {
   const { colId } = req.params;
   const boardId = await getBoardIdByColumn(colId);
-  if (!boardId || !(await isBoardMember(boardId, req.userId))) { res.status(403).json({ message: "Forbidden" }); return; }
+  if (!boardId || !(await isBoardMember(boardId, req.userId))) { res.status(403).json({ message: `Forbidden: No access to board ${boardId} for task creation` }); return; }
   const { title, position } = req.body as { title: string; position: number };
   if (typeof position !== "number") { res.status(400).json({ message: "Position required" }); return; }
   res.json(await prisma.task.create({ data: { title: title?.trim() || "New Task", columnId: colId, position } }));
 }));
 
-app.patch("/tasks/:id", auth, asyncHandler(async (req: any, res) => {
-  const { id } = req.params;
-  const boardId = await getBoardIdByTask(id);
-  if (!boardId || !(await isBoardMember(boardId, req.userId))) { res.status(403).json({ message: "Forbidden" }); return; }
-  const { title } = req.body as { title: string };
-  if (!title?.trim()) { res.status(400).json({ message: "Title required" }); return; }
-  res.json(await prisma.task.update({ where: { id }, data: { title: title.trim() } }));
-}));
-
-app.delete("/tasks/:id", auth, asyncHandler(async (req: any, res) => {
-  const { id } = req.params;
-  const boardId = await getBoardIdByTask(id);
-  if (!boardId || !(await isBoardMember(boardId, req.userId))) { res.status(403).json({ message: "Forbidden" }); return; }
-  await prisma.task.delete({ where: { id } });
-  res.json({ ok: true });
-}));
-
 app.patch("/tasks/reorder", auth, asyncHandler(async (req: any, res) => {
   const { columnId, items } = req.body as { columnId?: string; items?: { id: string; position: number }[] };
-  if (!columnId || !Array.isArray(items) || items.length === 0) { res.status(400).json({ message: "Invalid payload" }); return; }
+  if (!columnId || !Array.isArray(items)) { res.status(400).json({ message: "Invalid payload" }); return; }
 
   // Verify access to destination column
   const destBoardId = await getBoardIdByColumn(columnId);
-  if (!destBoardId || !(await isBoardMember(destBoardId, req.userId))) { res.status(403).json({ message: "Forbidden" }); return; }
+  if (!destBoardId) { res.status(403).json({ message: `Forbidden: Column ${columnId} not found or has no board` }); return; }
+  if (!(await isBoardMember(destBoardId, req.userId))) { res.status(403).json({ message: `Forbidden: No access to destination board ${destBoardId}` }); return; }
 
   // Verify user has access to ALL corresponding boards of the tasks being moved (IDOR patch)
   const taskIds = items.map(i => i.id);
@@ -344,8 +338,14 @@ app.patch("/tasks/reorder", auth, asyncHandler(async (req: any, res) => {
   if (tasks.length !== taskIds.length) { res.status(404).json({ message: "Some tasks not found" }); return; }
 
   const uniqueBoardIds = Array.from(new Set(tasks.map(t => t.column.boardId)));
+  console.log(`Reordering tasks in col ${columnId} for user ${req.userId}. Source boards: ${uniqueBoardIds.join(", ")}`);
   for (const bId of uniqueBoardIds) {
-    if (!(await isBoardMember(bId, req.userId))) { res.status(403).json({ message: "Forbidden" }); return; }
+    const isMember = await isBoardMember(bId, req.userId);
+    console.log(`Checking membership for board ${bId}: ${isMember}`);
+    if (!isMember) { 
+      res.status(403).json({ message: `Forbidden: No access to source board ${bId}` }); 
+      return; 
+    }
   }
 
   await Promise.all(
@@ -354,11 +354,28 @@ app.patch("/tasks/reorder", auth, asyncHandler(async (req: any, res) => {
   res.json({ ok: true });
 }));
 
+app.patch("/tasks/:id", auth, asyncHandler(async (req: any, res) => {
+  const { id } = req.params;
+  const boardId = await getBoardIdByTask(id);
+  if (!boardId || !(await isBoardMember(boardId, req.userId))) { res.status(403).json({ message: `Forbidden: No access to board ${boardId} for task editing` }); return; }
+  const { title } = req.body as { title: string };
+  if (!title?.trim()) { res.status(400).json({ message: "Title required" }); return; }
+  res.json(await prisma.task.update({ where: { id }, data: { title: title.trim() } }));
+}));
+
+app.delete("/tasks/:id", auth, asyncHandler(async (req: any, res) => {
+  const { id } = req.params;
+  const boardId = await getBoardIdByTask(id);
+  if (!boardId || !(await isBoardMember(boardId, req.userId))) { res.status(403).json({ message: `Forbidden: No access to board ${boardId} for task deletion` }); return; }
+  await prisma.task.delete({ where: { id } });
+  res.json({ ok: true });
+}));
+
 /* --------------------- Task Assignees (มอบหมายผู้รับผิดชอบ) -------------------- */
 app.post("/tasks/:taskId/assignees/:userId", auth, asyncHandler(async (req: any, res) => {
   const { taskId, userId } = req.params;
   const boardId = await getBoardIdByTask(taskId);
-  if (!boardId || !(await isBoardMember(boardId, req.userId))) { res.status(403).json({ message: "Forbidden" }); return; }
+  if (!boardId || !(await isBoardMember(boardId, req.userId))) { res.status(403).json({ message: `Forbidden: No access to board ${boardId} for task assignment` }); return; }
   const target = await prisma.membership.findUnique({ where: { boardId_userId: { boardId, userId } } });
   if (!target) { res.status(400).json({ message: "User is not a member of this board" }); return; }
 
@@ -388,7 +405,7 @@ app.post("/tasks/:taskId/assignees/:userId", auth, asyncHandler(async (req: any,
 app.delete("/tasks/:taskId/assignees/:userId", auth, asyncHandler(async (req: any, res) => {
   const { taskId, userId } = req.params;
   const boardId = await getBoardIdByTask(taskId);
-  if (!boardId || !(await isBoardMember(boardId, req.userId))) { res.status(403).json({ message: "Forbidden" }); return; }
+  if (!boardId || !(await isBoardMember(boardId, req.userId))) { res.status(403).json({ message: `Forbidden: No access to board ${boardId} for removing assignee` }); return; }
 
   await prisma.taskAssignee
     .delete({ where: { taskId_userId: { taskId, userId } } })
@@ -400,7 +417,7 @@ app.delete("/tasks/:taskId/assignees/:userId", auth, asyncHandler(async (req: an
 /* ------------------------------- Invites -------------------------------- */
 app.post("/boards/:boardId/invites", auth, asyncHandler(async (req: any, res) => {
   const { boardId } = req.params;
-  if (!(await isBoardMember(boardId, req.userId))) { res.status(403).json({ message: "Forbidden" }); return; }
+  if (!(await isBoardMember(boardId, req.userId))) { res.status(403).json({ message: `Forbidden: No access to board ${boardId} for creating invite` }); return; }
 
   const token = crypto.randomBytes(16).toString("hex");
   const inviteEmail = req.body?.email ? normalizeEmail(req.body.email) : undefined;
@@ -463,21 +480,21 @@ app.post("/invites/accept", auth, asyncHandler(async (req: any, res) => {
 /* ---------------------------------- Tags -------------------------------- */
 app.get("/boards/:boardId/tags", auth, asyncHandler(async (req: any, res) => {
   const { boardId } = req.params;
-  if (!(await isBoardMember(boardId, req.userId))) { res.status(403).json({ message: "Forbidden" }); return; }
+  if (!(await isBoardMember(boardId, req.userId))) { res.status(403).json({ message: `Forbidden: No access to board ${boardId} for viewing tags` }); return; }
   res.json(await prisma.tag.findMany({ where: { boardId } }));
 }));
 
 app.post("/boards/:boardId/tags", auth, asyncHandler(async (req: any, res) => {
   const { boardId } = req.params;
   const { name, color } = req.body as { name: string; color?: string };
-  if (!(await isBoardMember(boardId, req.userId))) { res.status(403).json({ message: "Forbidden" }); return; }
+  if (!(await isBoardMember(boardId, req.userId))) { res.status(403).json({ message: `Forbidden: No access to board ${boardId} for creating tag` }); return; }
   res.json(await prisma.tag.create({ data: { boardId, name, color: color ?? "#3b82f6" } }));
 }));
 
 app.post("/tasks/:taskId/tags/:tagId", auth, asyncHandler(async (req: any, res) => {
   const { taskId, tagId } = req.params;
   const boardId = await getBoardIdByTask(taskId);
-  if (!boardId || !(await isBoardMember(boardId, req.userId))) { res.status(403).json({ message: "Forbidden" }); return; }
+  if (!boardId || !(await isBoardMember(boardId, req.userId))) { res.status(403).json({ message: `Forbidden: No access to board ${boardId} for adding tag to task` }); return; }
   await prisma.taskTag.upsert({ where: { taskId_tagId: { taskId, tagId } }, update: {}, create: { taskId, tagId } });
   res.json({ ok: true });
 }));
@@ -485,7 +502,7 @@ app.post("/tasks/:taskId/tags/:tagId", auth, asyncHandler(async (req: any, res) 
 app.delete("/tasks/:taskId/tags/:tagId", auth, asyncHandler(async (req: any, res) => {
   const { taskId, tagId } = req.params;
   const boardId = await getBoardIdByTask(taskId);
-  if (!boardId || !(await isBoardMember(boardId, req.userId))) { res.status(403).json({ message: "Forbidden" }); return; }
+  if (!boardId || !(await isBoardMember(boardId, req.userId))) { res.status(403).json({ message: `Forbidden: No access to board ${boardId} for removing tag from task` }); return; }
   await prisma.taskTag.delete({ where: { taskId_tagId: { taskId, tagId } } });
   res.json({ ok: true });
 }));

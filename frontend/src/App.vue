@@ -1,17 +1,22 @@
 <template>
-  <div class="min-h-screen transition-colors duration-300">
-    <TopBar v-if="!isAuthPage" />
-    <main class="mx-auto w-full max-w-screen-2xl px-6 py-8">
-      <RouterView v-slot="{ Component }">
-        <transition
-          name="fade"
-          mode="out-in"
-          appear
-        >
-          <component :is="Component" />
-        </transition>
-      </RouterView>
-    </main>
+  <div class="h-screen flex flex-col bg-[var(--bg-main)] transition-colors duration-300 overflow-hidden relative">
+    <!-- Shared Stacking Context Container -->
+    <div class="contents">
+      <TopBar v-if="!isAuthPage" />
+      <main class="flex-1 overflow-hidden w-full relative">
+        <div class="h-full w-full">
+          <RouterView v-slot="{ Component }">
+            <transition
+              name="fade"
+              mode="out-in"
+              appear
+            >
+              <component :is="Component" />
+            </transition>
+          </RouterView>
+        </div>
+      </main>
+    </div>
   </div>
 </template>
 
@@ -75,7 +80,7 @@ onMounted(() => {
   }
 
   updateThemeClass(store.isDarkMode);
-  if (!document.title) document.title = "Kanban Board";
+  if (!document.title || document.title === "Kanban Board") document.title = "กระดานคัมบัง";
 });
 </script>
 

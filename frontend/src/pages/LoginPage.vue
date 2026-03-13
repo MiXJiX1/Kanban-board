@@ -24,7 +24,7 @@ async function login() {
     setToken(data.token);
     router.push("/boards");
   } catch {
-    errorMsg.value = "Invalid email or password";
+    errorMsg.value = "อีเมลหรือรหัสผ่านไม่ถูกต้อง";
   } finally {
     loading.value = false;
   }
@@ -36,17 +36,17 @@ async function login() {
     <div class="card w-full max-w-md p-6 bg-[var(--bg-card)] border border-[var(--border-color)]">
       <div class="mb-5 text-center">
         <h1 class="text-2xl font-bold text-[var(--text-primary)]">
-          Welcome back
+          ยินดีต้อนรับกลับมา
         </h1>
         <p class="text-[var(--text-secondary)] text-sm">
-          Sign in to your Kanban Board
+          ลงชื่อเข้าใช้กระดานคัมบังของคุณ
         </p>
       </div>
 
       <div class="space-y-3">
         <div>
           <label class="block text-sm font-medium text-[var(--text-secondary)] mb-1"
-            >Email</label
+            >อีเมล</label
           >
           <input
             v-model="email"
@@ -54,12 +54,13 @@ async function login() {
             type="email"
             placeholder="you@example.com"
             @keyup.enter="login"
+            autofocus
           />
         </div>
 
         <div>
           <label class="block text-sm font-medium text-[var(--text-secondary)] mb-1"
-            >Password</label
+            >รหัสผ่าน</label
           >
           <input
             v-model="password"
@@ -77,14 +78,14 @@ async function login() {
           :disabled="loading"
           @click="login"
         >
-          <span v-if="!loading">Login</span>
-          <span v-else>Signing in…</span>
+          <span v-if="!loading">เข้าสู่ระบบ</span>
+          <span v-else>กำลังเข้าสู่ระบบ…</span>
         </button>
 
         <p class="text-center text-sm text-slate-500 dark:text-slate-400">
-          Don’t have an account?
+          ยังไม่มีบัญชีใช่หรือไม่?
           <router-link class="text-violet-400 hover:underline" to="/register">
-            Register
+            สมัครสมาชิก
           </router-link>
         </p>
       </div>
